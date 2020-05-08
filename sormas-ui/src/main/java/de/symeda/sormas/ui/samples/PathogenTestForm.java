@@ -107,7 +107,7 @@ public class PathogenTestForm extends AbstractEditForm<PathogenTestDto> {
 		OptionGroup testResultVerifiedField = addField(PathogenTestDto.TEST_RESULT_VERIFIED, OptionGroup.class);
 		testResultVerifiedField.setRequired(true);
 		CheckBox fourFoldIncrease = addField(PathogenTestDto.FOUR_FOLD_INCREASE_ANTIBODY_TITER, CheckBox.class);
-		CssStyles.style(fourFoldIncrease, VSPACE_3, VSPACE_TOP_4);
+		CssStyles.style(fourFoldIncrease, VSPACE_TOP_4);
 		fourFoldIncrease.setVisible(false);
 		fourFoldIncrease.setEnabled(false);
 		addField(PathogenTestDto.TEST_RESULT_TEXT, TextArea.class).setRows(3);
