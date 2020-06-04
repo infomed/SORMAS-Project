@@ -180,10 +180,17 @@ public class DashboardMapComponent extends VerticalLayout {
 				}
 			}
 			
-			GeoLatLon center = Optional.ofNullable(mapCenter)
-				.orElseGet(FacadeProvider.getConfigFacade()::getCountryCenter);
-
-			map.setCenter(center);
+			GeoLatLon countryCenter = FacadeProvider.getConfigFacade().getCountryCenter();
+			if (countryCenter != new GeoLatLon(0, 0)) {
+				map.setCenter(countryCenter);
+			}
+			else {
+				if (mapCenter != null) {
+					map.setCenter(mapCenter);
+				} else {
+					map.setCenter(countryCenter);
+				}
+			}
 		}
 		
 		map.setZoom(FacadeProvider.getConfigFacade().getMapZoom());
