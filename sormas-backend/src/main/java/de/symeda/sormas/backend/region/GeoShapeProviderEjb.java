@@ -367,9 +367,12 @@ public class GeoShapeProviderEjb implements GeoShapeProvider {
 				boolean added = false;
 				for (int i=0; i<polygons.size(); i++) {
 					if (polygons.get(i).touches(polygon)) { // touch?
-						polygons.set(i, (Polygon)polygons.get(i).union(polygon)); // union
-						added = true;
-						break;
+						try {
+							polygons.set(i, (Polygon)polygons.get(i).union(polygon)); // union
+							added = true;
+							break;
+						}
+						catch (ClassCastException e) {}
 					}
 				}
 			
@@ -385,14 +388,17 @@ public class GeoShapeProviderEjb implements GeoShapeProvider {
 				if (i==j)
 					continue;
 				if (polygons.get(i).touches(polygons.get(j))) { // touch
-					polygons.set(i, (Polygon)polygons.get(i).union(polygons.get(j))); // union
-					polygons.remove(j);
-					if (i >= j) {
-						i--;
-						break;
-					} else {
-						j--;
+					try {
+						polygons.set(i, (Polygon)polygons.get(i).union(polygons.get(j))); // union
+						polygons.remove(j);
+						if (i >= j) {
+							i--;
+							break;
+						} else {
+							j--;
+						}
 					}
+					catch (ClassCastException e) {}
 				}
 			}
 		}
