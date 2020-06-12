@@ -495,7 +495,7 @@ public final class DateHelper {
 	public static Calendar getEpiCalendar() {
 
 		Calendar calendar = Calendar.getInstance();
-		calendar.setFirstDayOfWeek(Calendar.MONDAY);
+		calendar.setFirstDayOfWeek(Calendar.SUNDAY);
 		// Makes sure that the 1st of January is always in week 1
 		calendar.setMinimalDaysInFirstWeek(1);
 		// This is necessary because some old Java versions have problems
@@ -594,7 +594,7 @@ public final class DateHelper {
 		Calendar calendar = getEpiCalendar();
 		calendar.set(Calendar.YEAR, epiWeek.getYear());
 		calendar.set(Calendar.WEEK_OF_YEAR, epiWeek.getWeek());
-		calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+		calendar.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY);
 		calendar.set(Calendar.HOUR_OF_DAY, 0);
 		calendar.set(Calendar.MINUTE, 0);
 		calendar.set(Calendar.SECOND, 0);
@@ -619,7 +619,7 @@ public final class DateHelper {
 		Calendar calendar = getEpiCalendar();
 		calendar.set(Calendar.YEAR, epiWeek.getYear());
 		calendar.set(Calendar.WEEK_OF_YEAR, epiWeek.getWeek());
-		calendar.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY);
+		calendar.set(Calendar.DAY_OF_WEEK, Calendar.SATURDAY);
 		calendar.set(Calendar.HOUR_OF_DAY, 23);
 		calendar.set(Calendar.MINUTE, 59);
 		calendar.set(Calendar.SECOND, 59);
