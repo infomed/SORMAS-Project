@@ -25,8 +25,11 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.time.temporal.WeekFields;
+import java.time.ZoneId;
 
 import org.joda.time.DateTime;
 import org.joda.time.Days;
@@ -451,11 +454,17 @@ public final class DateHelper {
 	}
 
 	public static Date getStartOfWeek(Date date) {
-		return new LocalDateTime(getStartOfDay(date)).withDayOfWeek(1).toDate();
+		ZoneId zoneId = ZoneId.systemDefault();
+		LocalDateTime jld = new LocalDateTime(getStartOfDay(date));
+		java.time.LocalDate ld = java.time.LocalDate.of(jld.getYear(), jld.getMonthOfYear(), jld.getDayOfMonth()).with(WeekFields.of(Locale.US).dayOfWeek(), 1L);
+		return Date.from(ld.atStartOfDay(zoneId).toInstant());
 	}
 
 	public static Date getEndOfWeek(Date date) {
-		return new LocalDateTime(getEndOfDay(date)).withDayOfWeek(7).toDate();
+		ZoneId zoneId = ZoneId.systemDefault();
+		LocalDateTime jld = new LocalDateTime(getEndOfDay(date));
+		java.time.LocalDate ld = java.time.LocalDate.of(jld.getYear(), jld.getMonthOfYear(), jld.getDayOfMonth()).with(WeekFields.of(Locale.US).dayOfWeek(), 7L);
+		return Date.from(ld.atStartOfDay(zoneId).toInstant());
 	}
 
 	public static Date getStartOfMonth(Date date) {
