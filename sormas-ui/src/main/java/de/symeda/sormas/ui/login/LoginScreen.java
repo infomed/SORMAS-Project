@@ -234,13 +234,13 @@ public class LoginScreen extends CssLayout {
 		innerLayout.addComponent(img);
 		innerLayout.setComponentAlignment(img, Alignment.TOP_CENTER);
 
-		Label fullNameText = new Label("Surveillance,<br>Outbreak Response Management<br>and Analysis System<br>", ContentMode.HTML);
+		Label fullNameText = new Label("Sistema de vigilancia, análisis y manejo de la respuesta a brotes epidémicos<br>", ContentMode.HTML);
 		fullNameText.setWidth(320, Unit.PIXELS);
 		CssStyles.style(fullNameText, CssStyles.H2, CssStyles.LABEL_PRIMARY, CssStyles.VSPACE_TOP_NONE, CssStyles.ALIGN_CENTER);
 		innerLayout.addComponent(fullNameText);
 		innerLayout.setComponentAlignment(fullNameText, Alignment.TOP_CENTER);
 
-		Label missionText = new Label(
+		/*Label missionText = new Label(
 			"• " + I18nProperties.getCaption(Captions.LoginSidebar_diseasePrevention) + "<br>• "
 				+ I18nProperties.getCaption(Captions.LoginSidebar_diseaseDetection) + "<br>• "
 				+ I18nProperties.getCaption(Captions.LoginSidebar_outbreakResponse),
@@ -248,11 +248,11 @@ public class LoginScreen extends CssLayout {
 		missionText.setWidth(320, Unit.PIXELS);
 		CssStyles.style(missionText, CssStyles.H2, CssStyles.VSPACE_TOP_NONE, CssStyles.ALIGN_CENTER);
 		innerLayout.addComponent(missionText);
-		innerLayout.setComponentAlignment(missionText, Alignment.TOP_CENTER);
+		innerLayout.setComponentAlignment(missionText, Alignment.TOP_CENTER);*/
 
 		loginSidebarLayout.addComponent(innerLayout);
 
-		Label poweredByLabel = new Label(I18nProperties.getCaption(Captions.LoginSidebar_poweredBy));
+		/*Label poweredByLabel = new Label(I18nProperties.getCaption(Captions.LoginSidebar_poweredBy));
 		poweredByLabel.addStyleNames(CssStyles.LOGIN_HEADLINELABEL, CssStyles.H2);
 		loginSidebarLayout.addComponent(poweredByLabel);
 
@@ -274,7 +274,7 @@ public class LoginScreen extends CssLayout {
 		imgGiz.setWidth(LOGO_WIDTH, Unit.PIXELS);
 		poweredByLayout.addComponent(imgGiz);
 
-		loginSidebarLayout.addComponent(poweredByLayout);
+		loginSidebarLayout.addComponent(poweredByLayout);*/
 
 		Label customHtmlLabel = new Label();
 		customHtmlLabel.setContentMode(ContentMode.HTML);
