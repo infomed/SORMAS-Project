@@ -266,18 +266,18 @@ public class LoginScreen extends CssLayout {
 
 		loginSidebarLayout.addComponent(innerLayout);
 
-		Label poweredByLabel = new Label(I18nProperties.getCaption(Captions.LoginSidebar_poweredBy));
+		/*Label poweredByLabel = new Label(I18nProperties.getCaption(Captions.LoginSidebar_poweredBy));
 		poweredByLabel.addStyleNames(CssStyles.LOGIN_HEADLINELABEL, CssStyles.H2);
 		CssStyles.style(loginSidebarLayout, CssStyles.LOGINSIDEBAR);
 
 		VerticalLayout sidebarHeaderLayout = new VerticalLayout();
 		CssStyles.style(sidebarHeaderLayout, CssStyles.LAYOUT_SPACIOUS);
 		sidebarHeaderLayout.setSizeUndefined();
-		sidebarHeaderLayout.setSpacing(false);
+		sidebarHeaderLayout.setSpacing(false);*/
 
 		Path customHtmlDirectory = Paths.get(FacadeProvider.getConfigFacade().getCustomFilesPath());
 
-		if (isCustomBranding) {
+		/*if (isCustomBranding) {
 			Path sidebarHeaderPath = customHtmlDirectory.resolve("loginsidebar-header.html");
 			Label customSidebarHeaderLabel = new Label();
 			CssStyles.style(sidebarHeaderLayout, CssStyles.LOGINSIDEBAR_CUSTOM_HEADER);
@@ -346,7 +346,7 @@ public class LoginScreen extends CssLayout {
 			poweredByLayout.addComponent(imgGiz);
 		}
 
-		loginSidebarLayout.addComponent(poweredByLayout);
+		loginSidebarLayout.addComponent(poweredByLayout);*/
 
 		Label customSidebarLabel = new Label();
 		customSidebarLabel.setContentMode(ContentMode.HTML);
