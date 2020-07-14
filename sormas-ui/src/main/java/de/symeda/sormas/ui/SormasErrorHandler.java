@@ -19,6 +19,7 @@ package de.symeda.sormas.ui;
 
 import java.net.SocketException;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,7 +74,7 @@ public class SormasErrorHandler implements ErrorHandler {
 		if (t != null) {
 			// log the error or warning
 			if (errorMessage instanceof SystemError) {
-				logger.error(t.getMessage(), t);
+				logger.error(getMessage(t), t);
 			} else {
 				logger.warn(t.getMessage(), t);
 			}
@@ -91,7 +92,7 @@ public class SormasErrorHandler implements ErrorHandler {
 			} else {
 
 				// to prevent the original message from appearing, if necessary
-				if (component instanceof AbstractField<?>) {
+				if (component instanceof  	AbstractField<?>) {
 					((AbstractField<?>) component).setCurrentBufferedSourceException(null);
 				}
 
@@ -153,6 +154,39 @@ public class SormasErrorHandler implements ErrorHandler {
 				return new SystemError(message);
 			}
 		}
+	}
+
+	/**
+	 * @return A more explicit plain message if available.
+	 */
+	private static String getMessage(Throwable throwable) {
+
+		Throwable rootCause = ExceptionUtils.getRootCause(throwable);
+
+		String message;
+		if (rootCause != null) {
+
+			// Exception coming from Backend: Extract last Exception message from server-side StackTrace
+			try {
+				String[] causeBlocks = rootCause.getMessage().split("Caused by: ");
+				String lastCauseBlock = causeBlocks[causeBlocks.length - 1];
+				message = lastCauseBlock.split("\n\tat ")[0];
+			} catch (ArrayIndexOutOfBoundsException e) {
+				// In case this fails somehow return to default behaviour
+				message = rootCause.getMessage();
+			}
+		} else {
+
+			// Usually the rootCause message is more meaningful than the top
+			message = rootCause.getMessage();
+		}
+
+		// Discard extracted message if it is empty
+		if (StringUtils.isBlank(message)) {
+			message = throwable.getMessage();
+		}
+
+		return message;
 	}
 
 	private static final class LocalUserError extends UserError {
