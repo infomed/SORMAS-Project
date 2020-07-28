@@ -69,8 +69,10 @@ window.de_symeda_sormas_ui_map_LeafletMap = function () {
 //	    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 //	});
 	
-	var openStreetMapsLayer = L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
-		attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors. Tiles courtesy of Humanitarian OpenStreetMap Team'
+	var openStreetMapsLayer = L.tileLayer("http://tiles{s}.red.sld.cu/bright/{z}/{x}/{y}.png", {
+		maxZoom: 18,
+		subdomains: ['1', '2'],
+		attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors.'
 	});
 
 	this.onStateChange = function () {
