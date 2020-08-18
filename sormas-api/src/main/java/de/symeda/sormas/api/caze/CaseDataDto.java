@@ -64,6 +64,9 @@ public class CaseDataDto extends PseudonymizableDto {
 	public static final String CLASSIFICATION_DATE = "classificationDate";
 	public static final String CLASSIFICATION_COMMENT = "classificationComment";
 	public static final String CLASSIFIED_BY = "classifiedBy";
+	public static final String CLINICAL_CONFIRMATION = "clinicalConfirmation";
+	public static final String EPIDEMIOLOGICAL_CONFIRMATION = "epidemiologicalConfirmation";
+	public static final String LABORATORY_DIAGNOSTIC_CONFIRMATION = "laboratoryDiagnosticConfirmation";
 	public static final String INVESTIGATION_STATUS = "investigationStatus";
 	public static final String PERSON = "person";
 	public static final String DISEASE = "disease";
@@ -131,6 +134,7 @@ public class CaseDataDto extends PseudonymizableDto {
 	public static final String QUARANTINE_HOME_POSSIBLE_COMMENT = "quarantineHomePossibleComment";
 	public static final String QUARANTINE_HOME_SUPPLY_ENSURED = "quarantineHomeSupplyEnsured";
 	public static final String QUARANTINE_HOME_SUPPLY_ENSURED_COMMENT = "quarantineHomeSupplyEnsuredComment";
+	public static final String QUARANTINE_EXTENDED = "quarantineExtended";
 	public static final String REPORTING_TYPE = "reportingType";
 	public static final String POSTPARTUM = "postpartum";
 	public static final String TRIMESTER = "trimester";
@@ -177,6 +181,11 @@ public class CaseDataDto extends PseudonymizableDto {
 	private Date classificationDate;
 	@Outbreaks
 	private String classificationComment;
+
+	private YesNoUnknown clinicalConfirmation;
+	private YesNoUnknown epidemiologicalConfirmation;
+	private YesNoUnknown laboratoryDiagnosticConfirmation;
+
 	@Outbreaks
 	@Required
 	private InvestigationStatus investigationStatus;
@@ -320,6 +329,7 @@ public class CaseDataDto extends PseudonymizableDto {
 	private YesNoUnknown quarantineHomeSupplyEnsured;
 	@HideForCountriesExcept
 	private String quarantineHomeSupplyEnsuredComment;
+	private boolean quarantineExtended;
 	private ReportingType reportingType;
 	private YesNoUnknown postpartum;
 	private Trimester trimester;
@@ -346,6 +356,18 @@ public class CaseDataDto extends PseudonymizableDto {
 	public static CaseDataDto buildFromContact(ContactDto contact, VisitDto lastVisit) {
 
 		CaseDataDto cazeData = CaseDataDto.build(contact.getPerson(), contact.getDisease());
+		migratesAttributes(contact, cazeData, lastVisit);
+		return cazeData;
+	}
+
+	public static CaseDataDto buildFromUnrelatedContact(ContactDto contact, VisitDto lastVisit, Disease disease) {
+
+		CaseDataDto cazeData = CaseDataDto.build(contact.getPerson(), disease);
+		migratesAttributes(contact, cazeData, lastVisit);
+		return cazeData;
+	}
+
+	private static void migratesAttributes(ContactDto contact, CaseDataDto cazeData, VisitDto lastVisit) {
 		cazeData.setEpiData(contact.getEpiData());
 		SymptomsDto newSymptoms = cazeData.getSymptoms();
 		if (lastVisit != null) {
@@ -368,7 +390,6 @@ public class CaseDataDto extends PseudonymizableDto {
 			}
 		}
 		cazeData.setSymptoms(newSymptoms);
-		return cazeData;
 	}
 
 	public static CaseDataDto buildFromEventParticipant(EventParticipantDto eventParticipant, Disease eventDisease) {
@@ -443,6 +464,30 @@ public class CaseDataDto extends PseudonymizableDto {
 
 	public void setClassificationComment(String classificationComment) {
 		this.classificationComment = classificationComment;
+	}
+
+	public YesNoUnknown getClinicalConfirmation() {
+		return clinicalConfirmation;
+	}
+
+	public void setClinicalConfirmation(YesNoUnknown clinicalConfirmation) {
+		this.clinicalConfirmation = clinicalConfirmation;
+	}
+
+	public YesNoUnknown getEpidemiologicalConfirmation() {
+		return epidemiologicalConfirmation;
+	}
+
+	public void setEpidemiologicalConfirmation(YesNoUnknown epidemiologicalConfirmation) {
+		this.epidemiologicalConfirmation = epidemiologicalConfirmation;
+	}
+
+	public YesNoUnknown getLaboratoryDiagnosticConfirmation() {
+		return laboratoryDiagnosticConfirmation;
+	}
+
+	public void setLaboratoryDiagnosticConfirmation(YesNoUnknown laboratoryDiagnosticConfirmation) {
+		this.laboratoryDiagnosticConfirmation = laboratoryDiagnosticConfirmation;
 	}
 
 	public Disease getDisease() {
@@ -966,6 +1011,14 @@ public class CaseDataDto extends PseudonymizableDto {
 
 	public void setQuarantineHomeSupplyEnsuredComment(String quarantineHomeSupplyEnsuredComment) {
 		this.quarantineHomeSupplyEnsuredComment = quarantineHomeSupplyEnsuredComment;
+	}
+
+	public boolean isQuarantineExtended() {
+		return quarantineExtended;
+	}
+
+	public void setQuarantineExtended(boolean quarantineExtended) {
+		this.quarantineExtended = quarantineExtended;
 	}
 
 	public ReportingType getReportingType() {

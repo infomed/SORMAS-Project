@@ -18,6 +18,7 @@ package de.symeda.sormas.app.caze.edit;
 import static android.view.View.GONE;
 import static android.view.View.VISIBLE;
 
+import java.util.Date;
 import java.util.List;
 
 import android.view.ViewTreeObserver;
@@ -170,6 +171,9 @@ public class CaseEditFragment extends BaseEditFragment<FragmentCaseEditLayoutBin
 		if (!ConfigProvider.isGermanServer()) {
 			contentBinding.caseDataExternalID.setVisibility(GONE);
 			contentBinding.caseDataReportingType.setVisibility(GONE);
+			contentBinding.caseDataClinicalConfirmation.setVisibility(GONE);
+			contentBinding.caseDataEpidemiologicalConfirmation.setVisibility(GONE);
+			contentBinding.caseDataLaboratoryDiagnosticConfirmation.setVisibility(GONE);
 		} else {
 			contentBinding.caseDataEpidNumber.setVisibility(GONE);
 		}
@@ -222,6 +226,11 @@ public class CaseEditFragment extends BaseEditFragment<FragmentCaseEditLayoutBin
 		}
 
 		caseClassificationList = DataUtils.getEnumItems(CaseClassification.class, true);
+		if (!ConfigProvider.isGermanServer()) {
+			caseClassificationList.remove(new Item<>(CaseClassification.CONFIRMED_NO_SYMPTOMS.toString(), CaseClassification.CONFIRMED_NO_SYMPTOMS));
+			caseClassificationList
+				.remove(new Item<>(CaseClassification.CONFIRMED_UNKNOWN_SYMPTOMS.toString(), CaseClassification.CONFIRMED_UNKNOWN_SYMPTOMS));
+		}
 		caseOutcomeList = DataUtils.getEnumItems(CaseOutcome.class, true);
 		vaccinationInfoSourceList = DataUtils.getEnumItems(VaccinationInfoSource.class, true);
 		plagueTypeList = DataUtils.getEnumItems(PlagueType.class, true);
@@ -243,17 +252,16 @@ public class CaseEditFragment extends BaseEditFragment<FragmentCaseEditLayoutBin
 
 		// Case classification warning state
 		if (ConfigProvider.hasUserRight(UserRight.CASE_CLASSIFY)) {
-			contentBinding.caseDataCaseClassification.addValueChangedListener(new ValueChangeListener() {
+			contentBinding.caseDataCaseClassification.addValueChangedListener(field -> {
 
-				@Override
-				public void onChange(ControlPropertyField field) {
-					CaseClassification caseClassification = (CaseClassification) field.getValue();
-					if (caseClassification == CaseClassification.NOT_CLASSIFIED) {
-						getContentBinding().caseDataCaseClassification.enableWarningState(R.string.validation_soft_case_classification);
-					} else {
-						getContentBinding().caseDataCaseClassification.disableWarningState();
-					}
+				final CaseClassification caseClassification = (CaseClassification) field.getValue();
+				if (caseClassification == CaseClassification.NOT_CLASSIFIED) {
+					getContentBinding().caseDataCaseClassification.enableWarningState(R.string.validation_soft_case_classification);
+				} else {
+					getContentBinding().caseDataCaseClassification.disableWarningState();
 				}
+
+				CaseValidator.initializeGermanCaseClassificationValidation(record, caseClassification, getContentBinding());
 			});
 		}
 
@@ -315,9 +323,13 @@ public class CaseEditFragment extends BaseEditFragment<FragmentCaseEditLayoutBin
 					contentBinding.caseDataQuarantineOrderedVerbally.setVisibility(VISIBLE);
 					contentBinding.caseDataQuarantineOrderedOfficialDocument.setVisibility(VISIBLE);
 				}
+
+				contentBinding.caseDataQuarantineExtended.setVisibility(VISIBLE);
 			} else {
 				contentBinding.caseDataQuarantineOrderedVerbally.setVisibility(GONE);
 				contentBinding.caseDataQuarantineOrderedOfficialDocument.setVisibility(GONE);
+
+				contentBinding.caseDataQuarantineExtended.setVisibility(GONE);
 			}
 		});
 		if (!ConfigProvider.isGermanServer()) {
@@ -326,6 +338,37 @@ public class CaseEditFragment extends BaseEditFragment<FragmentCaseEditLayoutBin
 			contentBinding.caseDataQuarantineOrderedOfficialDocument.setVisibility(GONE);
 			contentBinding.caseDataQuarantineOrderedOfficialDocumentDate.setVisibility(GONE);
 		}
+
+		contentBinding.caseDataQuarantineExtended.setEnabled(false);
+
+		contentBinding.caseDataQuarantineTo.addValueChangedListener(new ValueChangeListener() {
+
+			private Date currentQuarantineTo = record.getQuarantineTo();
+			private boolean currentQuarantineExtended = record.isQuarantineExtended();
+
+			@Override
+			public void onChange(ControlPropertyField e) {
+				Date newQuarantineTo = (Date) e.getValue();
+
+				if (currentQuarantineTo != null && newQuarantineTo != null && newQuarantineTo.compareTo(currentQuarantineTo) > 0) {
+					final ConfirmationDialog confirmationDialog = new ConfirmationDialog(
+						getActivity(),
+						R.string.heading_extend_quarantine,
+						R.string.confirmation_extend_quarantine,
+						R.string.yes,
+						R.string.no);
+
+					confirmationDialog.setPositiveCallback(() -> {
+						contentBinding.caseDataQuarantineExtended.setValue(true);
+					});
+					confirmationDialog.setNegativeCallback(() -> contentBinding.caseDataQuarantineTo.setValue(currentQuarantineTo));
+
+					confirmationDialog.show();
+				} else if (!currentQuarantineExtended) {
+					contentBinding.caseDataQuarantineExtended.setValue(false);
+				}
+			}
+		});
 	}
 
 	@Override

@@ -19,6 +19,7 @@ import static android.view.View.GONE;
 import static android.view.View.VISIBLE;
 
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 
 import android.view.View;
@@ -27,9 +28,11 @@ import de.symeda.sormas.api.Disease;
 import de.symeda.sormas.api.contact.ContactCategory;
 import de.symeda.sormas.api.contact.ContactClassification;
 import de.symeda.sormas.api.contact.ContactDto;
+import de.symeda.sormas.api.contact.ContactIdentificationSource;
 import de.symeda.sormas.api.contact.ContactProximity;
 import de.symeda.sormas.api.contact.ContactRelation;
 import de.symeda.sormas.api.contact.QuarantineType;
+import de.symeda.sormas.api.contact.TracingApp;
 import de.symeda.sormas.api.utils.YesNoUnknown;
 import de.symeda.sormas.api.utils.fieldvisibility.FieldVisibilityCheckers;
 import de.symeda.sormas.api.utils.fieldvisibility.checkers.CountryFieldVisibilityChecker;
@@ -42,6 +45,9 @@ import de.symeda.sormas.app.backend.contact.Contact;
 import de.symeda.sormas.app.caze.edit.CaseNewActivity;
 import de.symeda.sormas.app.caze.read.CaseReadActivity;
 import de.symeda.sormas.app.component.Item;
+import de.symeda.sormas.app.component.controls.ControlPropertyField;
+import de.symeda.sormas.app.component.controls.ValueChangeListener;
+import de.symeda.sormas.app.component.dialog.ConfirmationDialog;
 import de.symeda.sormas.app.databinding.FragmentContactEditLayoutBinding;
 import de.symeda.sormas.app.util.DataUtils;
 import de.symeda.sormas.app.util.DiseaseConfigurationCache;
@@ -61,6 +67,8 @@ public class ContactEditFragment extends BaseEditFragment<FragmentContactEditLay
 	private List<Item> initialDistricts;
 	private List<Item> diseaseList;
 	private List<Item> categoryList;
+	private List<Item> contactIdentificationSources;
+	private List<Item> tracingApps;
 
 	// Instance methods
 
@@ -168,6 +176,8 @@ public class ContactEditFragment extends BaseEditFragment<FragmentContactEditLay
 		initialDistricts = InfrastructureHelper.loadDistricts(record.getRegion());
 		diseaseList = DataUtils.toItems(DiseaseConfigurationCache.getInstance().getAllDiseases(true, true, true));
 		categoryList = DataUtils.getEnumItems(ContactCategory.class, true);
+		contactIdentificationSources = DataUtils.getEnumItems(ContactIdentificationSource.class, true);
+		tracingApps = DataUtils.getEnumItems(TracingApp.class, true);
 	}
 
 	@Override
@@ -206,15 +216,62 @@ public class ContactEditFragment extends BaseEditFragment<FragmentContactEditLay
 					contentBinding.contactQuarantineOrderedVerbally.setVisibility(VISIBLE);
 					contentBinding.contactQuarantineOrderedOfficialDocument.setVisibility(VISIBLE);
 				}
+
+				contentBinding.contactQuarantineExtended.setVisibility(VISIBLE);
 			} else {
 				contentBinding.contactQuarantineOrderedVerbally.setVisibility(GONE);
 				contentBinding.contactQuarantineOrderedOfficialDocument.setVisibility(GONE);
+
+				contentBinding.contactQuarantineExtended.setVisibility(GONE);
+			}
+		});
+
+		contentBinding.contactQuarantineExtended.setEnabled(false);
+
+		contentBinding.contactQuarantineTo.addValueChangedListener(new ValueChangeListener() {
+
+			private Date currentQuarantineTo = record.getQuarantineTo();
+			private boolean currentQuarantineExtended = record.isQuarantineExtended();
+
+			@Override
+			public void onChange(ControlPropertyField e) {
+				Date newQuarantineTo = (Date) e.getValue();
+
+				if (currentQuarantineTo != null && newQuarantineTo != null && newQuarantineTo.compareTo(currentQuarantineTo) > 0) {
+					final ConfirmationDialog confirmationDialog = new ConfirmationDialog(
+						getActivity(),
+						R.string.heading_extend_quarantine,
+						R.string.confirmation_extend_quarantine,
+						R.string.yes,
+						R.string.no);
+
+					confirmationDialog.setPositiveCallback(() -> {
+						contentBinding.contactQuarantineExtended.setValue(true);
+					});
+					confirmationDialog.setNegativeCallback(() -> contentBinding.contactQuarantineTo.setValue(currentQuarantineTo));
+
+					confirmationDialog.show();
+				} else if (!currentQuarantineExtended) {
+					contentBinding.contactQuarantineExtended.setValue(false);
+				}
+			}
+		});
+
+		contentBinding.contactContactIdentificationSource.addValueChangedListener(e -> {
+			if (ContactIdentificationSource.TRACING_APP.equals(e.getValue())) {
+				contentBinding.contactTracingApp.setVisibility(VISIBLE);
+			} else {
+				contentBinding.contactTracingApp.setVisibility(GONE);
+				contentBinding.contactTracingApp.setValue(null);
+				contentBinding.contactTracingAppDetails.setVisibility(GONE);
+				contentBinding.contactTracingAppDetails.setValue("");
 			}
 		});
 		if (ConfigProvider.isGermanServer()) {
 			contentBinding.contactContactProximity.addValueChangedListener(
 				e -> updateContactCategory(contentBinding, (ContactProximity) contentBinding.contactContactProximity.getValue()));
 		} else {
+			contentBinding.contactContactIdentificationSource.setVisibility(GONE);
 			contentBinding.contactContactProximityDetails.setVisibility(GONE);
 			contentBinding.contactContactCategory.setVisibility(GONE);
 			contentBinding.contactQuarantineOrderedVerbally.setVisibility(GONE);
@@ -278,6 +335,8 @@ public class ContactEditFragment extends BaseEditFragment<FragmentContactEditLay
 		contentBinding.contactContactClassification.initializeSpinner(contactClassificationList);
 		contentBinding.contactQuarantine.initializeSpinner(quarantineList);
 		contentBinding.contactContactCategory.initializeSpinner(categoryList);
+		contentBinding.contactContactIdentificationSource.initializeSpinner(contactIdentificationSources);
+		contentBinding.contactTracingApp.initializeSpinner(tracingApps);
 
 		// Initialize ControlDateFields
 		contentBinding.contactLastContactDate.initializeDateField(getFragmentManager());

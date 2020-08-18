@@ -44,12 +44,14 @@ import de.symeda.auditlog.api.AuditedIgnore;
 import de.symeda.sormas.api.Disease;
 import de.symeda.sormas.api.contact.ContactCategory;
 import de.symeda.sormas.api.contact.ContactClassification;
+import de.symeda.sormas.api.contact.ContactIdentificationSource;
 import de.symeda.sormas.api.contact.ContactProximity;
 import de.symeda.sormas.api.contact.ContactReferenceDto;
 import de.symeda.sormas.api.contact.ContactRelation;
 import de.symeda.sormas.api.contact.ContactStatus;
 import de.symeda.sormas.api.contact.FollowUpStatus;
 import de.symeda.sormas.api.contact.QuarantineType;
+import de.symeda.sormas.api.contact.TracingApp;
 import de.symeda.sormas.api.utils.YesNoUnknown;
 import de.symeda.sormas.backend.caze.Case;
 import de.symeda.sormas.backend.common.CoreAdo;
@@ -86,6 +88,10 @@ public class Contact extends CoreAdo {
 	public static final String TASKS = "tasks";
 	public static final String RELATION_TO_CASE = "relationToCase";
 	public static final String RELATION_DESCRIPTION = "relationDescription";
+	public static final String CONTACT_IDENTIFICATION_SOURCE = "contactIdentificationSource";
+	public static final String CONTACT_IDENTIFICATION_SOURCE_DETAILS = "contactIdentificationSourceDetails";
+	public static final String TRACING_APP = "tracingApp";
+	public static final String TRACING_APP_DETAILS = "tracingAppDetails";
 	public static final String RESULTING_CASE = "resultingCase";
 	public static final String REPORT_LAT = "reportLat";
 	public static final String REPORT_LON = "reportLon";
@@ -118,6 +124,7 @@ public class Contact extends CoreAdo {
 	public static final String QUARANTINE_HOME_POSSIBLE_COMMENT = "quarantineHomePossibleComment";
 	public static final String QUARANTINE_HOME_SUPPLY_ENSURED = "quarantineHomeSupplyEnsured";
 	public static final String QUARANTINE_HOME_SUPPLY_ENSURED_COMMENT = "quarantineHomeSupplyEnsuredComment";
+	public static final String QUARANTINE_EXTENDED = "quarantineExtended";
 	public static final String VISITS = "visits";
 	public static final String ADDITIONAL_DETAILS = "additionalDetails";
 	public static final String EPI_DATA = "epiData";
@@ -138,6 +145,10 @@ public class Contact extends CoreAdo {
 	private ContactRelation relationToCase;
 	private String relationDescription;
 	private Date lastContactDate;
+	private ContactIdentificationSource contactIdentificationSource;
+	private String contactIdentificationSourceDetails;
+	private TracingApp tracingApp;
+	private String tracingAppDetails;
 	private ContactProximity contactProximity;
 	private ContactClassification contactClassification;
 	private ContactStatus contactStatus;
@@ -177,6 +188,7 @@ public class Contact extends CoreAdo {
 	private String quarantineHomePossibleComment;
 	private YesNoUnknown quarantineHomeSupplyEnsured;
 	private String quarantineHomeSupplyEnsuredComment;
+	private boolean quarantineExtended;
 	private String additionalDetails;
 	private EpiData epiData;
 
@@ -249,6 +261,42 @@ public class Contact extends CoreAdo {
 
 	public void setLastContactDate(Date lastContactDate) {
 		this.lastContactDate = lastContactDate;
+	}
+
+	@Enumerated(EnumType.STRING)
+	public ContactIdentificationSource getContactIdentificationSource() {
+		return contactIdentificationSource;
+	}
+
+	public void setContactIdentificationSource(ContactIdentificationSource contactIdentificationSource) {
+		this.contactIdentificationSource = contactIdentificationSource;
+	}
+
+	@Column(length = COLUMN_LENGTH_DEFAULT)
+	public String getContactIdentificationSourceDetails() {
+		return contactIdentificationSourceDetails;
+	}
+
+	public void setContactIdentificationSourceDetails(String contactIdentificationSourceDetails) {
+		this.contactIdentificationSourceDetails = contactIdentificationSourceDetails;
+	}
+
+	@Enumerated(EnumType.STRING)
+	public TracingApp getTracingApp() {
+		return tracingApp;
+	}
+
+	public void setTracingApp(TracingApp tracingApp) {
+		this.tracingApp = tracingApp;
+	}
+
+	@Column(length = COLUMN_LENGTH_DEFAULT)
+	public String getTracingAppDetails() {
+		return tracingAppDetails;
+	}
+
+	public void setTracingAppDetails(String tracingAppDetails) {
+		this.tracingAppDetails = tracingAppDetails;
 	}
 
 	@Enumerated(EnumType.STRING)
@@ -658,6 +706,15 @@ public class Contact extends CoreAdo {
 
 	public void setQuarantineHomeSupplyEnsuredComment(String quarantineHomeSupplyEnsuredComment) {
 		this.quarantineHomeSupplyEnsuredComment = quarantineHomeSupplyEnsuredComment;
+	}
+
+	@Column
+	public boolean isQuarantineExtended() {
+		return quarantineExtended;
+	}
+
+	public void setQuarantineExtended(boolean quarantineExtended) {
+		this.quarantineExtended = quarantineExtended;
 	}
 
 	@Column(length = COLUMN_LENGTH_BIG)

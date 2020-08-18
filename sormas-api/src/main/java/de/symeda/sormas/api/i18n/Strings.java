@@ -97,6 +97,7 @@ public interface Strings {
 	String confirmationDisableAllLineListingNational = "confirmationDisableAllLineListingNational";
 	String confirmationDisableAllLineListingRegion = "confirmationDisableAllLineListingRegion";
 	String confirmationEnterBulkEditMode = "confirmationEnterBulkEditMode";
+	String confirmationExtendQuarantine = "confirmationExtendQuarantine";
 	String confirmationLostToFollowUp = "confirmationLostToFollowUp";
 	String confirmationMergeCaseAndDeleteOther = "confirmationMergeCaseAndDeleteOther";
 	String confirmationPickCaseAndDeleteOther = "confirmationPickCaseAndDeleteOther";
@@ -112,10 +113,13 @@ public interface Strings {
 	String DiseaseNetworkDiagram_subheading = "DiseaseNetworkDiagram.subheading";
 	String done = "done";
 	String edit = "edit";
+	String entityAction = "entityAction";
+	String entityActions = "entityActions";
 	String entityAdditionalTest = "entityAdditionalTest";
 	String entityAdditionalTests = "entityAdditionalTests";
 	String entityBurial = "entityBurial";
 	String entityCampaign = "entityCampaign";
+	String entityCampaignDataForm = "entityCampaignDataForm";
 	String entityCampaigns = "entityCampaigns";
 	String entityCase = "entityCase";
 	String entityCases = "entityCases";
@@ -199,6 +203,7 @@ public interface Strings {
 	String headingCreateAdditionalTest = "headingCreateAdditionalTest";
 	String headingCreateCampaignDataForm = "headingCreateCampaignDataForm";
 	String headingCreateEntry = "headingCreateEntry";
+	String headingCreateNewAction = "headingCreateNewAction";
 	String headingCreateNewAggregateReport = "headingCreateNewAggregateReport";
 	String headingCreateNewCampaign = "headingCreateNewCampaign";
 	String headingCreateNewCase = "headingCreateNewCase";
@@ -227,6 +232,7 @@ public interface Strings {
 	String headingDownloadErrorReport = "headingDownloadErrorReport";
 	String headingDownloadImportGuide = "headingDownloadImportGuide";
 	String headingDownloadImportTemplate = "headingDownloadImportTemplate";
+	String headingEditAction = "headingEditAction";
 	String headingEditAdditionalTest = "headingEditAdditionalTest";
 	String headingEditAggregateReport = "headingEditAggregateReport";
 	String headingEditCampaign = "headingEditCampaign";
@@ -252,6 +258,7 @@ public interface Strings {
 	String headingEventsDeleted = "headingEventsDeleted";
 	String headingExplanationOfTerms = "headingExplanationOfTerms";
 	String headingExportFailed = "headingExportFailed";
+	String headingExtendQuarantine = "headingExtendQuarantine";
 	String headingFilters = "headingFilters";
 	String headingFollowUpCanceled = "headingFollowUpCanceled";
 	String headingFollowUpStatus = "headingFollowUpStatus";
@@ -320,6 +327,7 @@ public interface Strings {
 	String headingPIAAccountCreation = "headingPIAAccountCreation";
 	String headingPickOrCreateCase = "headingPickOrCreateCase";
 	String headingPickOrCreateContact = "headingPickOrCreateContact";
+	String headingPickOrCreateEvent = "headingPickOrCreateEvent";
 	String headingPickOrCreatePerson = "headingPickOrCreatePerson";
 	String headingPointOfEntryImport = "headingPointOfEntryImport";
 	String headingPointOfEntryInformation = "headingPointOfEntryInformation";
@@ -373,6 +381,7 @@ public interface Strings {
 	String infoContactDashboard = "infoContactDashboard";
 	String infoContactsViewRegionDistrictFilter = "infoContactsViewRegionDistrictFilter";
 	String infoCreateNewSampleDiscardsChanges = "infoCreateNewSampleDiscardsChanges";
+	String infoCreateNewSampleDiscardsChangesEventParticipant = "infoCreateNewSampleDiscardsChangesEventParticipant";
 	String infoCustomCaseExport = "infoCustomCaseExport";
 	String infoDashboardIncidence = "infoDashboardIncidence";
 	String infoDatabaseExportTables = "infoDatabaseExportTables";
@@ -408,6 +417,7 @@ public interface Strings {
 	String infoNoSourceCaseSelected = "infoNoSourceCaseSelected";
 	String infoPickOrCreateCase = "infoPickOrCreateCase";
 	String infoPickOrCreateCaseNewCase = "infoPickOrCreateCaseNewCase";
+	String infoPickOrCreateEventForCase = "infoPickOrCreateEventForCase";
 	String infoPopulationCollectionDate = "infoPopulationCollectionDate";
 	String infoPopulationDataView = "infoPopulationDataView";
 	String infoPopulationReferenceYear = "infoPopulationReferenceYear";
@@ -448,6 +458,7 @@ public interface Strings {
 	String messageAdditionalTestDeleted = "messageAdditionalTestDeleted";
 	String messageAdditionalTestSaved = "messageAdditionalTestSaved";
 	String messageAggregateReportFound = "messageAggregateReportFound";
+	String messageAllCampaignFormsValid = "messageAllCampaignFormsValid";
 	String messageAnimalContactsHint = "messageAnimalContactsHint";
 	String messageAreaArchived = "messageAreaArchived";
 	String messageAreaArchivingNotPossible = "messageAreaArchivingNotPossible";
@@ -499,9 +510,11 @@ public interface Strings {
 	String messageContactsDeleted = "messageContactsDeleted";
 	String messageContactsEdited = "messageContactsEdited";
 	String messageContactToCaseConfirmationRequired = "messageContactToCaseConfirmationRequired";
+	String messageConvertContactToCase = "messageConvertContactToCase";
 	String messageConvertEventParticipantToCase = "messageConvertEventParticipantToCase";
 	String messageCopyPassword = "messageCopyPassword";
 	String messageCreateCollectionTask = "messageCreateCollectionTask";
+	String messageCreateContactCase = "messageCreateContactCase";
 	String messageDatabaseExportFailed = "messageDatabaseExportFailed";
 	String messageDistrictArchived = "messageDistrictArchived";
 	String messageDistrictArchivingNotPossible = "messageDistrictArchivingNotPossible";
@@ -657,6 +670,7 @@ public interface Strings {
 	String notificationTaskStartSubject = "notificationTaskStartSubject";
 	String notificationVisitCompleted = "notificationVisitCompleted";
 	String notificationVisitCompletedSubject = "notificationVisitCompletedSubject";
+	String notSpecified = "notSpecified";
 	String numberEight = "numberEight";
 	String numberEleven = "numberEleven";
 	String numberFive = "numberFive";
@@ -717,7 +731,6 @@ public interface Strings {
 	String step = "step";
 	String toCase = "toCase";
 	String total = "total";
-	String unknown = "unknown";
 	String until = "until";
 	String week = "week";
 	String weekShort = "weekShort";
