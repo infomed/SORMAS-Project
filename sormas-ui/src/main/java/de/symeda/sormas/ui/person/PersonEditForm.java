@@ -17,25 +17,6 @@
  *******************************************************************************/
 package de.symeda.sormas.ui.person;
 
-import static de.symeda.sormas.ui.utils.CssStyles.H3;
-import static de.symeda.sormas.ui.utils.CssStyles.VSPACE_3;
-import static de.symeda.sormas.ui.utils.LayoutUtil.divsCss;
-import static de.symeda.sormas.ui.utils.LayoutUtil.fluidColumnLocCss;
-import static de.symeda.sormas.ui.utils.LayoutUtil.fluidRow;
-import static de.symeda.sormas.ui.utils.LayoutUtil.fluidRowLocs;
-import static de.symeda.sormas.ui.utils.LayoutUtil.loc;
-import static de.symeda.sormas.ui.utils.LayoutUtil.oneOfFourCol;
-import static de.symeda.sormas.ui.utils.LayoutUtil.oneOfTwoCol;
-
-import java.time.Month;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.Date;
-import java.util.GregorianCalendar;
-
-import org.apache.commons.lang3.StringUtils;
-
 import com.vaadin.ui.Label;
 import com.vaadin.v7.ui.AbstractSelect;
 import com.vaadin.v7.ui.AbstractSelect.ItemCaptionMode;
@@ -43,7 +24,6 @@ import com.vaadin.v7.ui.ComboBox;
 import com.vaadin.v7.ui.DateField;
 import com.vaadin.v7.ui.Field;
 import com.vaadin.v7.ui.TextField;
-
 import de.symeda.sormas.api.Disease;
 import de.symeda.sormas.api.FacadeProvider;
 import de.symeda.sormas.api.caze.CaseDataDto;
@@ -61,6 +41,7 @@ import de.symeda.sormas.api.person.CauseOfDeath;
 import de.symeda.sormas.api.person.DeathPlaceType;
 import de.symeda.sormas.api.person.EducationType;
 import de.symeda.sormas.api.person.OccupationType;
+import de.symeda.sormas.api.person.PersonContext;
 import de.symeda.sormas.api.person.PersonDto;
 import de.symeda.sormas.api.person.PresentCondition;
 import de.symeda.sormas.api.region.CommunityReferenceDto;
@@ -69,6 +50,7 @@ import de.symeda.sormas.api.region.RegionReferenceDto;
 import de.symeda.sormas.api.utils.DataHelper.Pair;
 import de.symeda.sormas.api.utils.DateHelper;
 import de.symeda.sormas.api.utils.fieldvisibility.FieldVisibilityCheckers;
+import de.symeda.sormas.api.utils.fieldvisibility.checkers.CountryFieldVisibilityChecker;
 import de.symeda.sormas.ui.location.LocationEditForm;
 import de.symeda.sormas.ui.utils.AbstractEditForm;
 import de.symeda.sormas.ui.utils.ApproximateAgeValidator;
@@ -78,6 +60,24 @@ import de.symeda.sormas.ui.utils.FieldHelper;
 import de.symeda.sormas.ui.utils.OutbreakFieldVisibilityChecker;
 import de.symeda.sormas.ui.utils.UiFieldAccessCheckers;
 import de.symeda.sormas.ui.utils.ViewMode;
+import org.apache.commons.lang3.StringUtils;
+
+import java.time.Month;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Date;
+import java.util.GregorianCalendar;
+
+import static de.symeda.sormas.ui.utils.CssStyles.H3;
+import static de.symeda.sormas.ui.utils.CssStyles.VSPACE_3;
+import static de.symeda.sormas.ui.utils.LayoutUtil.divsCss;
+import static de.symeda.sormas.ui.utils.LayoutUtil.fluidColumnLocCss;
+import static de.symeda.sormas.ui.utils.LayoutUtil.fluidRow;
+import static de.symeda.sormas.ui.utils.LayoutUtil.fluidRowLocs;
+import static de.symeda.sormas.ui.utils.LayoutUtil.loc;
+import static de.symeda.sormas.ui.utils.LayoutUtil.oneOfFourCol;
+import static de.symeda.sormas.ui.utils.LayoutUtil.oneOfTwoCol;
 
 public class PersonEditForm extends AbstractEditForm<PersonDto> {
 
@@ -104,10 +104,12 @@ public class PersonEditForm extends AbstractEditForm<PersonDto> {
 	private final ViewMode viewMode;
 	private ComboBox birthDateDay;
 	private ComboBox cbPlaceOfBirthFacility;
+	private PersonContext personContext;
 
 	//@formatter:off
     private static final String HTML_LAYOUT =
             loc(PERSON_INFORMATION_HEADING_LOC) +
+					fluidRowLocs(PersonDto.UUID, "")+
                     fluidRowLocs(PersonDto.FIRST_NAME, PersonDto.LAST_NAME) +
                     fluidRow(
                             fluidRowLocs(PersonDto.BIRTH_DATE_YYYY, PersonDto.BIRTH_DATE_MM, PersonDto.BIRTH_DATE_DD),
@@ -133,6 +135,11 @@ public class PersonEditForm extends AbstractEditForm<PersonDto> {
                             oneOfTwoCol(PersonDto.BURIAL_PLACE_DESCRIPTION)
                     ) +
                     fluidRowLocs(PersonDto.PASSPORT_NUMBER, PersonDto.NATIONAL_HEALTH_ID) +
+					fluidRowLocs(PersonDto.EXTERNAL_ID, "") +
+
+
+
+					fluidRowLocs(PersonDto.HAS_COVID_APP, PersonDto.COVID_CODE_DELIVERED) +
 
                     loc(OCCUPATION_HEADER) +
                     divsCss(VSPACE_3,
@@ -158,17 +165,20 @@ public class PersonEditForm extends AbstractEditForm<PersonDto> {
                                     loc(PersonDto.GENERAL_PRACTITIONER_DETAILS));
 	//@formatter:on
 
-	public PersonEditForm(Disease disease, String diseaseDetails, ViewMode viewMode, boolean isInJurisdiction) {
+	public PersonEditForm(PersonContext personContext, Disease disease, String diseaseDetails, ViewMode viewMode, boolean isInJurisdiction) {
 		super(
 			PersonDto.class,
 			PersonDto.I18N_PREFIX,
 			false,
-			FieldVisibilityCheckers.withDisease(disease).add(new OutbreakFieldVisibilityChecker(viewMode)),
+			FieldVisibilityCheckers.withDisease(disease)
+				.add(new OutbreakFieldVisibilityChecker(viewMode))
+				.add(new CountryFieldVisibilityChecker(FacadeProvider.getConfigFacade().getCountryLocale())),
 			UiFieldAccessCheckers.withCheckers(
 				isInJurisdiction,
 				FieldHelper.createPersonalDataFieldAccessChecker(),
 				FieldHelper.createSensitiveDataFieldAccessChecker()));
 
+		this.personContext = personContext;
 		this.disease = disease;
 		this.diseaseDetails = diseaseDetails;
 		this.viewMode = viewMode;
@@ -189,6 +199,7 @@ public class PersonEditForm extends AbstractEditForm<PersonDto> {
 		personInformationHeadingLabel.addStyleName(H3);
 		getContent().addComponent(personInformationHeadingLabel, PERSON_INFORMATION_HEADING_LOC);
 
+		addField(PersonDto.UUID).setReadOnly(true);
 		addField(PersonDto.FIRST_NAME, TextField.class);
 		addField(PersonDto.LAST_NAME, TextField.class);
 		ComboBox sex = addField(PersonDto.SEX, ComboBox.class);
@@ -252,7 +263,15 @@ public class PersonEditForm extends AbstractEditForm<PersonDto> {
 			PersonDto.PHONE_OWNER,
 			PersonDto.EMAIL_ADDRESS,
 			PersonDto.PASSPORT_NUMBER,
-			PersonDto.NATIONAL_HEALTH_ID);
+			PersonDto.NATIONAL_HEALTH_ID,
+			PersonDto.EXTERNAL_ID);
+
+		addField(PersonDto.HAS_COVID_APP).addStyleName(CssStyles.FORCE_CAPTION_CHECKBOX);
+		addField(PersonDto.COVID_CODE_DELIVERED).addStyleName(CssStyles.FORCE_CAPTION_CHECKBOX);
+
+		if (personContext != PersonContext.CASE) {
+			setVisible(false, PersonDto.HAS_COVID_APP, PersonDto.COVID_CODE_DELIVERED);
+		}
 
 		ComboBox cbPlaceOfBirthRegion = addInfrastructureField(PersonDto.PLACE_OF_BIRTH_REGION);
 		ComboBox cbPlaceOfBirthDistrict = addInfrastructureField(PersonDto.PLACE_OF_BIRTH_DISTRICT);

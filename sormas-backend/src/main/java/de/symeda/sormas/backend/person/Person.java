@@ -17,23 +17,6 @@
  *******************************************************************************/
 package de.symeda.sormas.backend.person;
 
-import static de.symeda.sormas.api.EntityDto.COLUMN_LENGTH_DEFAULT;
-
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
-
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
-import javax.persistence.OneToOne;
-import javax.persistence.Temporal;
-import javax.persistence.TemporalType;
-
 import de.symeda.auditlog.api.Audited;
 import de.symeda.sormas.api.Disease;
 import de.symeda.sormas.api.facility.FacilityType;
@@ -46,12 +29,32 @@ import de.symeda.sormas.api.person.OccupationType;
 import de.symeda.sormas.api.person.PersonDto;
 import de.symeda.sormas.api.person.PresentCondition;
 import de.symeda.sormas.api.person.Sex;
+import de.symeda.sormas.api.person.SymptomJournalStatus;
 import de.symeda.sormas.backend.common.AbstractDomainObject;
 import de.symeda.sormas.backend.facility.Facility;
 import de.symeda.sormas.backend.location.Location;
 import de.symeda.sormas.backend.region.Community;
 import de.symeda.sormas.backend.region.District;
 import de.symeda.sormas.backend.region.Region;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
+
+import static de.symeda.sormas.api.EntityDto.COLUMN_LENGTH_DEFAULT;
 
 @Entity
 @Audited
@@ -60,6 +63,7 @@ public class Person extends AbstractDomainObject {
 	private static final long serialVersionUID = -1735038738114840087L;
 
 	public static final String TABLE_NAME = "person";
+	public static final String PERSON_LOCATIONS_TABLE_NAME = "person_locations";
 
 	public static final String FIRST_NAME = "firstName";
 	public static final String LAST_NAME = "lastName";
@@ -108,6 +112,9 @@ public class Person extends AbstractDomainObject {
 	public static final String OCCUPATION_FACILITY_TYPE = "occupationFacilityType";
 	public static final String PLACE_OF_BIRTH_FACILITY_TYPE = "placeOfBirthFacilityType";
 	public static final String ADDRESSES = "addresses";
+
+	public static final String SYMPTOM_JOURNAL_STATUS = "symptomJournalStatus";
+	public static final String EXTERNAL_ID = "externalId";
 
 	private String firstName;
 	private String lastName;
@@ -166,6 +173,12 @@ public class Person extends AbstractDomainObject {
 	private FacilityType placeOfBirthFacilityType;
 	private Set<Location> addresses = new HashSet<>();
 	private Date changeDateOfEmbeddedLists;
+
+	private SymptomJournalStatus symptomJournalStatus;
+
+	private boolean hasCovidApp;
+	private boolean covidCodeDelivered;
+	private String externalId;
 
 	@Column(nullable = false, length = COLUMN_LENGTH_DEFAULT)
 	public String getFirstName() {
@@ -589,7 +602,10 @@ public class Person extends AbstractDomainObject {
 		this.placeOfBirthFacilityType = placeOfBirthFacilityType;
 	}
 
-	@OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = Location.PERSON)
+	@OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+	@JoinTable(name = PERSON_LOCATIONS_TABLE_NAME,
+		joinColumns = @JoinColumn(name = "person_id"),
+		inverseJoinColumns = @JoinColumn(name = "location_id"))
 	public Set<Location> getAddresses() {
 		return addresses;
 	}
@@ -610,6 +626,38 @@ public class Person extends AbstractDomainObject {
 	public void setChangeDateOfEmbeddedLists(Date changeDateOfEmbeddedLists) {
 		this.changeDateOfEmbeddedLists = changeDateOfEmbeddedLists;
 	}
+
+	@Enumerated(EnumType.STRING)
+	public SymptomJournalStatus getSymptomJournalStatus() {
+		return symptomJournalStatus;
+	}
+
+	public void setSymptomJournalStatus(SymptomJournalStatus symptomJournalStatus) {
+		this.symptomJournalStatus = symptomJournalStatus;
+	}
+
+	@Column
+	public boolean isHasCovidApp() {
+		return hasCovidApp;
+	}
+
+	public void setHasCovidApp(boolean hasCovidApp) {
+		this.hasCovidApp = hasCovidApp;
+	}
+
+	@Column
+	public boolean isCovidCodeDelivered() {
+		return covidCodeDelivered;
+	}
+
+	public void setCovidCodeDelivered(boolean covidCodeDelivered) {
+		this.covidCodeDelivered = covidCodeDelivered;
+	}
+
+	@Column
+	public String getExternalId() { return externalId; }
+
+	public void setExternalId(String externalId) { this.externalId = externalId; }
 
 	@Override
 	public String toString() {

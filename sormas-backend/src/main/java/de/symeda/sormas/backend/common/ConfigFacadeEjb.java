@@ -19,6 +19,8 @@ package de.symeda.sormas.backend.common;
 
 import de.symeda.sormas.api.ConfigFacade;
 import de.symeda.sormas.api.Language;
+import de.symeda.sormas.api.i18n.I18nProperties;
+import de.symeda.sormas.api.Sormas2SormasConfig;
 import de.symeda.sormas.api.person.PersonHelper;
 import de.symeda.sormas.api.region.GeoLatLon;
 import de.symeda.sormas.api.utils.CompatibilityCheckResponse;
@@ -45,7 +47,6 @@ public class ConfigFacadeEjb implements ConfigFacade {
 
 	public static final String COUNTRY_NAME = "country.name";
 	public static final String COUNTRY_LOCALE = "country.locale";
-	private static final String FULL_COUNTRY_LOCALE_PATTERN = "[a-zA-Z]*-[a-zA-Z]*";
 	public static final String COUNTRY_EPID_PREFIX = "country.epidprefix";
 	private static final String COUNTRY_CENTER_LAT = "country.center.latitude";
 	private static final String COUNTRY_CENTER_LON = "country.center.longitude";
@@ -58,6 +59,8 @@ public class ConfigFacadeEjb implements ConfigFacade {
 	public static final String CUSTOM_BRANDING = "custombranding";
 	public static final String CUSTOM_BRANDING_NAME = "custombranding.name";
 	public static final String CUSTOM_BRANDING_LOGO_PATH = "custombranding.logo.path";
+	public static final String CUSTOM_BRANDING_USE_LOGIN_SIDEBAR = "custombranding.useloginsidebar";
+	public static final String CUSTOM_BRANDING_LOGIN_BACKGROUND_PATH = "custombranding.loginbackground.path";
 
 	public static final String APP_URL = "app.url";
 	public static final String APP_LEGACY_URL = "app.legacy.url";
@@ -84,10 +87,19 @@ public class ConfigFacadeEjb implements ConfigFacade {
 	public static final String INTERFACE_SYMPTOM_JOURNAL_CLIENT_ID = "interface.symptomjournal.clientid";
 	public static final String INTERFACE_SYMPTOM_JOURNAL_SECRET = "interface.symptomjournal.secret";
 
+	public static final String INTERFACE_PATIENT_DIARY_URL = "interface.patientdiary.url";
+
 	public static final String DAYS_AFTER_CASE_GETS_ARCHIVED = "daysAfterCaseGetsArchived";
 	private static final String DAYS_AFTER_EVENT_GETS_ARCHIVED = "daysAfterEventGetsArchived";
 
 	private static final String GEOCODING_OSGTS_ENDPOINT = "geocodingOsgtsEndpoint";
+
+	private static final String SORMAS2SORMAS_FILES_PATH = "sormas2sormas.path";
+	private static final String SORMAS2SORMAS_KEY_ALIAS = "sormas2sormas.keyAlias";
+	private static final String SORMAS2SORMAS_KEYSTORE_NAME = "sormas2sormas.keystoreName";
+	private static final String SORMAS2SORMAS_KEYSTORE_PASSWORD = "sormas2sormas.keystorePass";
+	private static final String SORMAS2SORMAS_TRUSTSTORE_NAME = "sormas2sormas.truststoreName";
+	private static final String SORMAS2SORMAS_TRUSTSTORE_PASS = "sormas2sormas.truststorePass";
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -154,6 +166,18 @@ public class ConfigFacadeEjb implements ConfigFacade {
 		return normalizeLocaleString(locale);
 	}
 
+	@Override
+	public String getCountryCode() {
+		String locale = getProperty(COUNTRY_LOCALE, Language.EN.getLocale().toString());
+		String normalizedLocale = normalizeLocaleString(locale);
+
+		if (normalizedLocale.contains("-")) {
+			return normalizedLocale.substring(normalizedLocale.lastIndexOf("-") + 1);
+		} else {
+			return normalizedLocale;
+		}
+	}
+
 	static String normalizeLocaleString(String locale) {
 
 		locale = locale.trim();
@@ -167,20 +191,11 @@ public class ConfigFacadeEjb implements ConfigFacade {
 	}
 
 	@Override
-	public boolean isGermanServer() {
-		if (Pattern.matches(FULL_COUNTRY_LOCALE_PATTERN, getCountryLocale())) {
-			return getCountryLocale().toLowerCase().endsWith("de");
+	public boolean isConfiguredCountry(String countryCode) {
+		if (Pattern.matches(I18nProperties.FULL_COUNTRY_LOCALE_PATTERN, getCountryLocale())) {
+			return getCountryLocale().toLowerCase().endsWith(countryCode.toLowerCase());
 		} else {
-			return getCountryLocale().toLowerCase().startsWith("de");
-		}
-	}
-
-	@Override
-	public boolean isSwissServer() {
-		if (Pattern.matches(FULL_COUNTRY_LOCALE_PATTERN, getCountryLocale())) {
-			return getCountryLocale().toLowerCase().endsWith("ch");
-		} else {
-			return getCountryLocale().toLowerCase().startsWith("ch");
+			return getCountryLocale().toLowerCase().startsWith(countryCode.toLowerCase());
 		}
 	}
 
@@ -217,6 +232,16 @@ public class ConfigFacadeEjb implements ConfigFacade {
 	@Override
 	public String getCustomBrandingLogoPath() {
 		return getProperty(CUSTOM_BRANDING_LOGO_PATH, null);
+	}
+
+	@Override
+	public boolean isUseLoginSidebar() {
+		return getBoolean(CUSTOM_BRANDING_USE_LOGIN_SIDEBAR, true);
+	}
+
+	@Override
+	public String getLoginBackgroundPath() {
+		return getProperty(CUSTOM_BRANDING_LOGIN_BACKGROUND_PATH, null);
 	}
 
 	@Override
@@ -342,6 +367,23 @@ public class ConfigFacadeEjb implements ConfigFacade {
 	@Override
 	public String getSymptomJournalSecret() {
 		return getProperty(INTERFACE_SYMPTOM_JOURNAL_SECRET, null);
+	}
+
+	@Override
+	public Sormas2SormasConfig getSormas2SormasConfig() {
+		Sormas2SormasConfig config = new Sormas2SormasConfig();
+		config.setFilePath(getProperty(SORMAS2SORMAS_FILES_PATH, null));
+		config.setKeyAlias(getProperty(SORMAS2SORMAS_KEY_ALIAS, null));
+		config.setKeystoreName(getProperty(SORMAS2SORMAS_KEYSTORE_NAME, null));
+		config.setKeystorePass(getProperty(SORMAS2SORMAS_KEYSTORE_PASSWORD, null));
+		config.setTruststoreName(getProperty(SORMAS2SORMAS_TRUSTSTORE_NAME, null));
+		config.setTruststorePass(getProperty(SORMAS2SORMAS_TRUSTSTORE_PASS, null));
+		return config;
+	}
+
+	@Override
+	public String getPatientDiaryUrl() {
+		return getProperty(INTERFACE_PATIENT_DIARY_URL, null);
 	}
 
 	@Override

@@ -39,6 +39,8 @@ public interface PersonFacade {
 
 	PersonDto getPersonByUuid(String uuid);
 
+	PersonDto getPersonForJournal(String Uuid);
+
 	PersonDto savePerson(PersonDto dto);
 
 	void validate(PersonDto dto);
@@ -60,4 +62,9 @@ public interface PersonFacade {
 	Boolean isValidPersonUuid(String personUuid);
 
 	List<PersonQuarantineEndDto> getLatestQuarantineEndDates(Date since);
+
+	List<PersonFollowUpEndDto> getLatestFollowUpEndDates(Date since, boolean forSymptomsJournal);
+
+	boolean setSymptomJournalStatus(String personUuid, SymptomJournalStatus status);
+
 }

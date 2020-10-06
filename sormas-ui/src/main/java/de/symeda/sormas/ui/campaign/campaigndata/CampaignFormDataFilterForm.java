@@ -15,13 +15,16 @@
 
 package de.symeda.sormas.ui.campaign.campaigndata;
 
+import java.util.function.Consumer;
+
 import com.vaadin.v7.data.Property;
 import com.vaadin.v7.ui.ComboBox;
+
 import de.symeda.sormas.api.FacadeProvider;
 import de.symeda.sormas.api.campaign.data.CampaignFormDataCriteria;
 import de.symeda.sormas.api.campaign.data.CampaignFormDataDto;
 import de.symeda.sormas.api.campaign.form.CampaignFormMetaReferenceDto;
-import de.symeda.sormas.api.caze.CaseDataDto;
+import de.symeda.sormas.api.event.EventCriteria;
 import de.symeda.sormas.api.i18n.I18nProperties;
 import de.symeda.sormas.api.region.DistrictReferenceDto;
 import de.symeda.sormas.api.region.RegionReferenceDto;
@@ -30,8 +33,7 @@ import de.symeda.sormas.api.utils.DataHelper;
 import de.symeda.sormas.ui.UserProvider;
 import de.symeda.sormas.ui.utils.AbstractFilterForm;
 import de.symeda.sormas.ui.utils.FieldConfiguration;
-
-import java.util.function.Consumer;
+import de.symeda.sormas.ui.utils.FieldHelper;
 
 public class CampaignFormDataFilterForm extends AbstractFilterForm<CampaignFormDataCriteria> {
 
@@ -70,8 +72,12 @@ public class CampaignFormDataFilterForm extends AbstractFilterForm<CampaignFormD
 				200));
 		cbCampaignForm.addItems(FacadeProvider.getCampaignFormMetaFacade().getAllCampaignFormMetasAsReferences());
 
+		FieldHelper.addSoftRequiredStyle(cbCampaign, cbCampaignForm);
+
 		if (formMetaChangedCallback != null) {
-			cbCampaignForm.addValueChangeListener(e -> formMetaChangedCallback.accept((CampaignFormMetaReferenceDto) e.getProperty().getValue()));
+			cbCampaignForm.addValueChangeListener(e -> {
+				formMetaChangedCallback.accept((CampaignFormMetaReferenceDto) e.getProperty().getValue());
+			});
 		}
 
 		UserDto user = UserProvider.getCurrent().getUser();
@@ -119,8 +125,12 @@ public class CampaignFormDataFilterForm extends AbstractFilterForm<CampaignFormD
 		case CampaignFormDataDto.REGION:
 			RegionReferenceDto region = (RegionReferenceDto) event.getProperty().getValue();
 
-			if (!DataHelper.equal(region, criteria.getRegion())) {
-				getField(CaseDataDto.DISTRICT).setValue(null);
+			if (region == null) {
+				clearAndDisableFields(CampaignFormDataCriteria.DISTRICT, CampaignFormDataCriteria.COMMUNITY);
+			} else {
+				enableFields(EventCriteria.DISTRICT);
+				clearAndDisableFields(CampaignFormDataCriteria.COMMUNITY);
+				applyRegionFilterDependency(region, EventCriteria.DISTRICT);
 			}
 
 			break;
@@ -128,7 +138,12 @@ public class CampaignFormDataFilterForm extends AbstractFilterForm<CampaignFormD
 			DistrictReferenceDto district = (DistrictReferenceDto) event.getProperty().getValue();
 
 			if (!DataHelper.equal(district, criteria.getDistrict())) {
-				getField(CaseDataDto.COMMUNITY).setValue(null);
+				if (district == null) {
+					clearAndDisableFields(CampaignFormDataCriteria.COMMUNITY);
+				} else {
+					enableFields(CampaignFormDataCriteria.COMMUNITY);
+					applyDistrictDependency(district, CampaignFormDataCriteria.COMMUNITY);
+				}
 			}
 
 			break;
