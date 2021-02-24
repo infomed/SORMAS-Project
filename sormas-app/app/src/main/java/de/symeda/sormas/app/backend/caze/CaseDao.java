@@ -282,6 +282,7 @@ public class CaseDao extends AbstractAdoDao<Case> {
 		Case newCase = build(person);
 		if (caze != null) {
 			newCase.setDisease(caze.getDisease());
+			newCase.setDiseaseVariant(caze.getDiseaseVariant());
 			newCase.setDiseaseDetails(caze.getDiseaseDetails());
 			newCase.setPlagueType(caze.getPlagueType());
 			newCase.setDengueFeverType(caze.getDengueFeverType());
@@ -294,6 +295,7 @@ public class CaseDao extends AbstractAdoDao<Case> {
 		Case newCase = build(contact.getPerson());
 		newCase.setDisease(contact.getDisease());
 		newCase.setDiseaseDetails(contact.getDiseaseDetails());
+		newCase.getEpiData().setContactWithSourceCaseKnown(YesNoUnknown.YES);
 		return newCase;
 	}
 

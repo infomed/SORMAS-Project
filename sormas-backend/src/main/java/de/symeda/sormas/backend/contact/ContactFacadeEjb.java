@@ -17,18 +17,18 @@
  *******************************************************************************/
 package de.symeda.sormas.backend.contact;
 
-import static de.symeda.sormas.backend.feature.FeatureConfigurationFacadeEjb.FeatureConfigurationFacadeEjbLocal;
 import static de.symeda.sormas.backend.visit.VisitLogic.getVisitResult;
 import static java.time.temporal.ChronoUnit.DAYS;
 
 import java.math.BigInteger;
-import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -56,7 +56,7 @@ import javax.persistence.criteria.JoinType;
 import javax.persistence.criteria.Order;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
-import javax.persistence.criteria.Subquery;
+import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -92,8 +92,11 @@ import de.symeda.sormas.api.exposure.ExposureType;
 import de.symeda.sormas.api.followup.FollowUpDto;
 import de.symeda.sormas.api.i18n.Captions;
 import de.symeda.sormas.api.i18n.I18nProperties;
+import de.symeda.sormas.api.i18n.Strings;
 import de.symeda.sormas.api.i18n.Validations;
+import de.symeda.sormas.api.importexport.ExportConfigurationDto;
 import de.symeda.sormas.api.location.LocationDto;
+import de.symeda.sormas.api.person.JournalPersonDto;
 import de.symeda.sormas.api.person.PersonReferenceDto;
 import de.symeda.sormas.api.region.DistrictReferenceDto;
 import de.symeda.sormas.api.region.RegionReferenceDto;
@@ -110,6 +113,7 @@ import de.symeda.sormas.api.utils.DateHelper;
 import de.symeda.sormas.api.utils.SortProperty;
 import de.symeda.sormas.api.utils.ValidationRuntimeException;
 import de.symeda.sormas.api.utils.YesNoUnknown;
+import de.symeda.sormas.api.vaccinationinfo.VaccinationInfoDto;
 import de.symeda.sormas.api.visit.VisitResultDto;
 import de.symeda.sormas.api.visit.VisitStatus;
 import de.symeda.sormas.api.visit.VisitSummaryExportDetailsDto;
@@ -120,19 +124,19 @@ import de.symeda.sormas.backend.caze.CaseFacadeEjb.CaseFacadeEjbLocal;
 import de.symeda.sormas.backend.caze.CaseJurisdictionChecker;
 import de.symeda.sormas.backend.caze.CaseService;
 import de.symeda.sormas.backend.clinicalcourse.ClinicalCourseFacadeEjb;
-import de.symeda.sormas.backend.common.AbstractAdoService;
 import de.symeda.sormas.backend.common.AbstractDomainObject;
+import de.symeda.sormas.backend.common.ConfigFacadeEjb.ConfigFacadeEjbLocal;
+import de.symeda.sormas.backend.common.CriteriaBuilderHelper;
 import de.symeda.sormas.backend.common.TaskCreationException;
 import de.symeda.sormas.backend.epidata.EpiData;
 import de.symeda.sormas.backend.epidata.EpiDataFacadeEjb;
 import de.symeda.sormas.backend.epidata.EpiDataFacadeEjb.EpiDataFacadeEjbLocal;
 import de.symeda.sormas.backend.event.ContactEventSummaryDetails;
-import de.symeda.sormas.backend.event.Event;
-import de.symeda.sormas.backend.event.EventParticipant;
 import de.symeda.sormas.backend.event.EventService;
 import de.symeda.sormas.backend.exposure.Exposure;
 import de.symeda.sormas.backend.externaljournal.ExternalJournalService;
 import de.symeda.sormas.backend.facility.Facility;
+import de.symeda.sormas.backend.feature.FeatureConfigurationFacadeEjb.FeatureConfigurationFacadeEjbLocal;
 import de.symeda.sormas.backend.location.Location;
 import de.symeda.sormas.backend.person.Person;
 import de.symeda.sormas.backend.person.PersonFacadeEjb;
@@ -140,6 +144,7 @@ import de.symeda.sormas.backend.person.PersonService;
 import de.symeda.sormas.backend.region.Community;
 import de.symeda.sormas.backend.region.CommunityFacadeEjb;
 import de.symeda.sormas.backend.region.CommunityService;
+import de.symeda.sormas.backend.region.Country;
 import de.symeda.sormas.backend.region.District;
 import de.symeda.sormas.backend.region.DistrictFacadeEjb;
 import de.symeda.sormas.backend.region.DistrictService;
@@ -158,9 +163,12 @@ import de.symeda.sormas.backend.user.UserFacadeEjb;
 import de.symeda.sormas.backend.user.UserService;
 import de.symeda.sormas.backend.util.DateHelper8;
 import de.symeda.sormas.backend.util.DtoHelper;
+import de.symeda.sormas.backend.util.IterableHelper;
 import de.symeda.sormas.backend.util.ModelConstants;
 import de.symeda.sormas.backend.util.Pseudonymizer;
-import de.symeda.sormas.backend.util.QueryHelper;
+import de.symeda.sormas.backend.vaccinationinfo.VaccinationInfo;
+import de.symeda.sormas.backend.vaccinationinfo.VaccinationInfoFacadeEjb;
+import de.symeda.sormas.backend.vaccinationinfo.VaccinationInfoFacadeEjb.VaccinationInfoFacadeEjbLocal;
 import de.symeda.sormas.backend.visit.Visit;
 import de.symeda.sormas.backend.visit.VisitService;
 
@@ -172,6 +180,8 @@ public class ContactFacadeEjb implements ContactFacade {
 	@PersistenceContext(unitName = ModelConstants.PERSISTENCE_UNIT_NAME)
 	private EntityManager em;
 
+	@EJB
+	private ConfigFacadeEjbLocal configFacade;
 	@EJB
 	private ContactService contactService;
 	@EJB
@@ -210,6 +220,10 @@ public class ContactFacadeEjb implements ContactFacade {
 	private FeatureConfigurationFacadeEjbLocal featureConfigurationFacade;
 	@EJB
 	private EventService eventService;
+	@EJB
+	private PersonFacadeEjb.PersonFacadeEjbLocal personFacade;
+	@EJB
+	private VaccinationInfoFacadeEjbLocal vaccinationInfoFacade;
 
 	@Override
 	public List<String> getAllActiveUuids() {
@@ -270,18 +284,25 @@ public class ContactFacadeEjb implements ContactFacade {
 	}
 
 	@Override
-	public ContactDto saveContact(ContactDto dto) {
-		return saveContact(dto, true);
+	public ContactDto saveContact(@Valid ContactDto dto) {
+		return saveContact(dto, true, true);
 	}
 
 	@Override
-	public ContactDto saveContact(ContactDto dto, boolean handleChanges) {
+	public ContactDto saveContact(@Valid ContactDto dto, boolean handleChanges, boolean handleCaseChanges) {
+		return saveContact(dto, handleChanges, handleCaseChanges, true);
+	}
+
+	public ContactDto saveContact(ContactDto dto, boolean handleChanges, boolean handleCaseChanges, boolean checkChangeDate) {
 		final Contact existingContact = dto.getUuid() != null ? contactService.getByUuid(dto.getUuid()) : null;
 		final ContactDto existingContactDto = toDto(existingContact);
 		restorePseudonymizedDto(dto, existingContact, existingContactDto);
 
 		validate(dto);
 
+		if (existingContact != null) {
+			handleExternalJournalPerson(dto);
+		}
 		// taking this out because it may lead to server problems
 		// case disease can change over time and there is currently no mechanism that would delete all related contacts
 		// in this case the best solution is to only keep this hidden from the UI and still allow it in the backend
@@ -289,24 +310,32 @@ public class ContactFacadeEjb implements ContactFacade {
 		//			throw new UnsupportedOperationException("Contact creation is not allowed for diseases that don't have contact follow-up.");
 		//		}
 
-		Contact entity = fromDto(dto);
+		Contact entity = fromDto(dto, checkChangeDate);
 		contactService.ensurePersisted(entity);
 
 		if (existingContact == null && featureConfigurationFacade.isTaskGenerationFeatureEnabled(TaskType.CONTACT_INVESTIGATION)) {
 			createInvestigationTask(entity);
 
 		}
-		if (existingContact != null) {
-			handleExternalJournalPerson(existingContactDto, dto);
-		}
 
 		if (handleChanges) {
 			updateContactVisitAssociations(existingContactDto, entity);
 
-			contactService.updateFollowUpUntilAndStatus(entity);
+			final boolean convertedToCase =
+				(existingContactDto == null || existingContactDto.getResultingCase() == null) && entity.getResultingCase() != null;
+			final boolean dropped = entity.getContactStatus() == ContactStatus.DROPPED
+				&& (existingContactDto == null || existingContactDto.getContactStatus() != ContactStatus.DROPPED);
+			if (dropped || convertedToCase) {
+				contactService.cancelFollowUp(
+					entity,
+					I18nProperties
+						.getString(convertedToCase ? Strings.messageSystemFollowUpCanceled : Strings.messageSystemFollowUpCanceledByDropping));
+			} else {
+				contactService.updateFollowUpUntilAndStatus(entity);
+			}
 			contactService.udpateContactStatus(entity);
 
-			if (entity.getCaze() != null) {
+			if (handleCaseChanges && entity.getCaze() != null) {
 				caseFacade.onCaseChanged(CaseFacadeEjbLocal.toDto(entity.getCaze()), entity.getCaze());
 			}
 		}
@@ -315,9 +344,18 @@ public class ContactFacadeEjb implements ContactFacade {
 	}
 
 	// 5 second delay added before notifying of update so that current transaction can complete and new data can be retrieved from DB
-	private void handleExternalJournalPerson(ContactDto existingContact, ContactDto updatedContact) {
+	private void handleExternalJournalPerson(ContactDto updatedContact) {
+		if (!configFacade.isExternalJournalActive()) {
+			return;
+		}
+
 		final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
-		Runnable notify = () -> externalJournalService.notifyExternalJournalFollowUpUntilUpdate(updatedContact, existingContact.getFollowUpUntil());
+		/**
+		 * The .getPersonForJournal(...) here gets the person in the state it is (most likely) known to an external journal.
+		 * Changes of related data is assumed to be not yet persisted in the database.
+		 */
+		JournalPersonDto existingPerson = personFacade.getPersonForJournal(updatedContact.getPerson().getUuid());
+		Runnable notify = () -> externalJournalService.notifyExternalJournalPersonUpdate(existingPerson);
 		executorService.schedule(notify, 5, TimeUnit.SECONDS);
 	}
 
@@ -403,27 +441,18 @@ public class ContactFacadeEjb implements ContactFacade {
 	}
 
 	@Override
-	public List<ContactExportDto> getExportList(ContactCriteria contactCriteria, int first, int max, Language userLanguage) {
+	public List<ContactExportDto> getExportList(
+		ContactCriteria contactCriteria,
+		int first,
+		int max,
+		ExportConfigurationDto exportConfiguration,
+		Language userLanguage) {
 
 		CriteriaBuilder cb = em.getCriteriaBuilder();
 		CriteriaQuery<ContactExportDto> cq = cb.createQuery(ContactExportDto.class);
 		Root<Contact> contact = cq.from(Contact.class);
 
 		ContactJoins joins = new ContactJoins(contact);
-
-		// Events count subquery
-		Subquery<Long> eventCountSq = cq.subquery(Long.class);
-		Root<EventParticipant> eventCountRoot = eventCountSq.from(EventParticipant.class);
-		Join<EventParticipant, Event> eventJoin = eventCountRoot.join(EventParticipant.EVENT, JoinType.INNER);
-		Join<Person, Contact> contactJoin = eventCountRoot.join(EventParticipant.PERSON, JoinType.INNER).join(Person.CONTACTS, JoinType.INNER);
-
-		eventCountSq.where(
-			cb.and(
-				cb.equal(contactJoin.get(Contact.UUID), contact.get(Contact.UUID)),
-				cb.isFalse(eventJoin.get(Event.DELETED)),
-				cb.isFalse(eventJoin.get(Event.ARCHIVED)),
-				cb.isFalse(eventCountRoot.get(EventParticipant.DELETED))));
-		eventCountSq.select(cb.countDistinct(eventJoin.get(Event.ID)));
 
 		cq.multiselect(
 			Stream.concat(
@@ -436,9 +465,13 @@ public class ContactFacadeEjb implements ContactFacade {
 					contact.get(Contact.DISEASE),
 					contact.get(Contact.DISEASE_DETAILS),
 					contact.get(Contact.CONTACT_CLASSIFICATION),
+					contact.get(Contact.MULTI_DAY_CONTACT),
+					contact.get(Contact.FIRST_CONTACT_DATE),
 					contact.get(Contact.LAST_CONTACT_DATE),
 					joins.getPerson().get(Person.FIRST_NAME),
 					joins.getPerson().get(Person.LAST_NAME),
+					joins.getPerson().get(Person.SALUTATION),
+					joins.getPerson().get(Person.OTHER_SALUTATION),
 					joins.getPerson().get(Person.SEX),
 					joins.getPerson().get(Person.BIRTHDATE_DD),
 					joins.getPerson().get(Person.BIRTHDATE_MM),
@@ -485,14 +518,34 @@ public class ContactFacadeEjb implements ContactFacade {
 					joins.getPerson().get(Person.EMAIL_ADDRESS),
 					joins.getPerson().get(Person.OCCUPATION_TYPE),
 					joins.getPerson().get(Person.OCCUPATION_DETAILS),
+					joins.getPerson().get(Person.ARMED_FORCES_RELATION_TYPE),
 					joins.getRegion().get(Region.NAME),
 					joins.getDistrict().get(District.NAME),
 					joins.getCommunity().get(Community.NAME),
 					joins.getEpiData().get(EpiData.ID),
 					joins.getEpiData().get(EpiData.CONTACT_WITH_SOURCE_CASE_KNOWN),
 					contact.get(Contact.RETURNING_TRAVELER),
-					eventCountSq,
-					contact.get(Contact.EXTERNAL_ID)),
+					joins.getVaccinationInfo().get(VaccinationInfo.VACCINATION),
+					joins.getVaccinationInfo().get(VaccinationInfo.VACCINATION_DOSES),
+					joins.getVaccinationInfo().get(VaccinationInfo.VACCINATION_INFO_SOURCE),
+					joins.getVaccinationInfo().get(VaccinationInfo.FIRST_VACCINATION_DATE),
+					joins.getVaccinationInfo().get(VaccinationInfo.LAST_VACCINATION_DATE),
+					joins.getVaccinationInfo().get(VaccinationInfo.VACCINE_NAME),
+					joins.getVaccinationInfo().get(VaccinationInfo.OTHER_VACCINE_NAME),
+					joins.getVaccinationInfo().get(VaccinationInfo.VACCINE_MANUFACTURER),
+					joins.getVaccinationInfo().get(VaccinationInfo.OTHER_VACCINE_MANUFACTURER),
+					joins.getVaccinationInfo().get(VaccinationInfo.VACCINE_INN),
+					joins.getVaccinationInfo().get(VaccinationInfo.VACCINE_BATCH_NUMBER),
+					joins.getVaccinationInfo().get(VaccinationInfo.VACCINE_UNII_CODE),
+					joins.getVaccinationInfo().get(VaccinationInfo.VACCINE_ATC_CODE),
+					contact.get(Contact.EXTERNAL_ID),
+					contact.get(Contact.EXTERNAL_TOKEN),
+					joins.getPerson().get(Person.BIRTH_NAME),
+					joins.getPersonBirthCountry().get(Country.ISO_CODE),
+					joins.getPersonBirthCountry().get(Country.DEFAULT_NAME),
+					joins.getPersonCitizenship().get(Country.ISO_CODE),
+					joins.getPersonCitizenship().get(Country.DEFAULT_NAME),
+					joins.getReportingDistrict().get(District.NAME)),
 				listCriteriaBuilder.getJurisdictionSelections(joins)).collect(Collectors.toList()));
 
 		cq.distinct(true);
@@ -511,43 +564,66 @@ public class ContactFacadeEjb implements ContactFacade {
 		if (!exportContacts.isEmpty()) {
 			List<Long> exportContactIds = exportContacts.stream().map(e -> e.getId()).collect(Collectors.toList());
 
-			CriteriaQuery<VisitSummaryExportDetails> visitsCq = cb.createQuery(VisitSummaryExportDetails.class);
-			Root<Contact> visitsCqRoot = visitsCq.from(Contact.class);
-			ContactJoins visitContactJoins = new ContactJoins(visitsCqRoot);
+			List<VisitSummaryExportDetails> visitSummaries = null;
+			if (shouldExportFields(
+				exportConfiguration,
+				ContactExportDto.NUMBER_OF_VISITS,
+				ContactExportDto.LAST_COOPERATIVE_VISIT_DATE,
+				ContactExportDto.LAST_COOPERATIVE_VISIT_SYMPTOMATIC,
+				ContactExportDto.LAST_COOPERATIVE_VISIT_SYMPTOMS)) {
+				CriteriaQuery<VisitSummaryExportDetails> visitsCq = cb.createQuery(VisitSummaryExportDetails.class);
+				Root<Contact> visitsCqRoot = visitsCq.from(Contact.class);
+				ContactJoins visitContactJoins = new ContactJoins(visitsCqRoot);
 
-			visitsCq.where(
-				ContactService.and(cb, contact.get(AbstractDomainObject.ID).in(exportContactIds), cb.isNotEmpty(visitsCqRoot.get(Contact.VISITS))));
-			visitsCq.multiselect(
-				Stream
-					.concat(
-						Stream.of(
-							visitsCqRoot.get(AbstractDomainObject.ID),
-							visitContactJoins.getVisits().get(Visit.VISIT_DATE_TIME),
-							visitContactJoins.getVisits().get(Visit.VISIT_STATUS),
-							visitContactJoins.getVisitSymptoms()),
-						listCriteriaBuilder.getJurisdictionSelections(visitContactJoins))
-					.collect(Collectors.toList()));
+				visitsCq.where(
+					CriteriaBuilderHelper
+						.and(cb, contact.get(AbstractDomainObject.ID).in(exportContactIds), cb.isNotEmpty(visitsCqRoot.get(Contact.VISITS))));
+				visitsCq.multiselect(
+					Stream
+						.concat(
+							Stream.of(
+								visitsCqRoot.get(AbstractDomainObject.ID),
+								visitContactJoins.getVisits().get(Visit.VISIT_DATE_TIME),
+								visitContactJoins.getVisits().get(Visit.VISIT_STATUS),
+								visitContactJoins.getVisitSymptoms()),
+							listCriteriaBuilder.getJurisdictionSelections(visitContactJoins))
+						.collect(Collectors.toList()));
 
-			List<VisitSummaryExportDetails> visitSummaries = em.createQuery(visitsCq).getResultList();
+				visitSummaries = em.createQuery(visitsCq).getResultList();
+			}
 
-			CriteriaQuery<Exposure> exposuresCq = cb.createQuery(Exposure.class);
-			Root<Exposure> exposuresRoot = exposuresCq.from(Exposure.class);
-			Join<Exposure, EpiData> exposuresEpiDataJoin = exposuresRoot.join(Exposure.EPI_DATA, JoinType.LEFT);
-			Expression<String> epiDataIdsExpr = exposuresEpiDataJoin.get(EpiData.ID);
-			Predicate exposuresPredicate = cb.and(
-				epiDataIdsExpr.in(exportContacts.stream().map(ContactExportDto::getEpiDataId).collect(Collectors.toList())),
-				cb.or(
-					cb.equal(exposuresRoot.get(Exposure.EXPOSURE_TYPE), ExposureType.TRAVEL),
-					cb.equal(exposuresRoot.get(Exposure.EXPOSURE_TYPE), ExposureType.BURIAL)));
-			exposuresCq.where(exposuresPredicate);
-			exposuresCq.orderBy(cb.asc(exposuresEpiDataJoin.get(EpiData.ID)));
-			List<Exposure> exposureList = em.createQuery(exposuresCq).setHint(ModelConstants.HINT_HIBERNATE_READ_ONLY, true).getResultList();
-			Map<Long, List<Exposure>> exposures = exposureList.stream().collect(Collectors.groupingBy(e -> e.getEpiData().getId()));
+			Map<Long, List<Exposure>> exposures = null;
+			if (shouldExportFields(
+				exportConfiguration,
+				ContactExportDto.TRAVELED,
+				ContactExportDto.TRAVEL_HISTORY,
+				ContactExportDto.BURIAL_ATTENDED)) {
+				CriteriaQuery<Exposure> exposuresCq = cb.createQuery(Exposure.class);
+				Root<Exposure> exposuresRoot = exposuresCq.from(Exposure.class);
+				Join<Exposure, EpiData> exposuresEpiDataJoin = exposuresRoot.join(Exposure.EPI_DATA, JoinType.LEFT);
+				Expression<String> epiDataIdsExpr = exposuresEpiDataJoin.get(EpiData.ID);
+				Predicate exposuresPredicate = cb.and(
+					epiDataIdsExpr.in(exportContacts.stream().map(ContactExportDto::getEpiDataId).collect(Collectors.toList())),
+					cb.or(
+						cb.equal(exposuresRoot.get(Exposure.EXPOSURE_TYPE), ExposureType.TRAVEL),
+						cb.equal(exposuresRoot.get(Exposure.EXPOSURE_TYPE), ExposureType.BURIAL)));
+				exposuresCq.where(exposuresPredicate);
+				exposuresCq.orderBy(cb.asc(exposuresEpiDataJoin.get(EpiData.ID)));
+				List<Exposure> exposureList = em.createQuery(exposuresCq).setHint(ModelConstants.HINT_HIBERNATE_READ_ONLY, true).getResultList();
+				exposures = exposureList.stream().collect(Collectors.groupingBy(e -> e.getEpiData().getId()));
+			}
 
-			// Load latest events info
-			// Adding a second query here is not perfect, but selecting the last event with a criteria query
-			// doesn't seem to be possible and using a native query is not an option because of user filters
-			List<ContactEventSummaryDetails> eventSummaries = eventService.getEventSummaryDetailsByContacts(resultContactsUuids);
+			Map<String, List<ContactEventSummaryDetails>> eventSummaries = null;
+			if (shouldExportFields(
+				exportConfiguration,
+				ContactExportDto.EVENT_COUNT,
+				ContactExportDto.LATEST_EVENT_ID,
+				ContactExportDto.LATEST_EVENT_TITLE)) {
+				// Load event count and latest events info per contact
+				eventSummaries = eventService.getEventSummaryDetailsByContacts(resultContactsUuids)
+					.stream()
+					.collect(Collectors.groupingBy(ContactEventSummaryDetails::getContactUuid, Collectors.toList()));
+			}
 
 			// Adding a second query here is not perfect, but selecting the last cooperative visit with a criteria query
 			// doesn't seem to be possible and using a native query is not an option because of user filters
@@ -555,22 +631,25 @@ public class ContactFacadeEjb implements ContactFacade {
 			for (ContactExportDto exportContact : exportContacts) {
 				boolean inJurisdiction = contactJurisdictionChecker.isInJurisdictionOrOwned(exportContact.getJurisdiction());
 
-				List<VisitSummaryExportDetails> visits =
-					visitSummaries.stream().filter(v -> v.getContactId() == exportContact.getId()).collect(Collectors.toList());
+				if (visitSummaries != null) {
+					List<VisitSummaryExportDetails> visits =
+						visitSummaries.stream().filter(v -> v.getContactId() == exportContact.getId()).collect(Collectors.toList());
 
-				VisitSummaryExportDetails lastCooperativeVisit = visits.stream()
-					.filter(v -> v.getVisitStatus() == VisitStatus.COOPERATIVE)
-					.max(Comparator.comparing(VisitSummaryExportDetails::getVisitDateTime))
-					.orElse(null);
+					VisitSummaryExportDetails lastCooperativeVisit = visits.stream()
+						.filter(v -> v.getVisitStatus() == VisitStatus.COOPERATIVE)
+						.max(Comparator.comparing(VisitSummaryExportDetails::getVisitDateTime))
+						.orElse(null);
 
-				exportContact.setNumberOfVisits(visits.size());
-				if (lastCooperativeVisit != null) {
-					SymptomsDto symptoms = SymptomsFacadeEjb.toDto(lastCooperativeVisit.getSymptoms());
-					pseudonymizer.pseudonymizeDto(SymptomsDto.class, symptoms, inJurisdiction, null);
+					exportContact.setNumberOfVisits(visits.size());
 
-					exportContact.setLastCooperativeVisitDate(lastCooperativeVisit.getVisitDateTime());
-					exportContact.setLastCooperativeVisitSymptoms(SymptomsHelper.buildSymptomsHumanString(symptoms, true, userLanguage));
-					exportContact.setLastCooperativeVisitSymptomatic(symptoms.getSymptomatic() ? YesNoUnknown.YES : YesNoUnknown.NO);
+					if (lastCooperativeVisit != null) {
+						SymptomsDto symptoms = SymptomsFacadeEjb.toDto(lastCooperativeVisit.getSymptoms());
+						pseudonymizer.pseudonymizeDto(SymptomsDto.class, symptoms, inJurisdiction, null);
+
+						exportContact.setLastCooperativeVisitDate(lastCooperativeVisit.getVisitDateTime());
+						exportContact.setLastCooperativeVisitSymptoms(SymptomsHelper.buildSymptomsHumanString(symptoms, true, userLanguage));
+						exportContact.setLastCooperativeVisitSymptomatic(symptoms.getSymptomatic() ? YesNoUnknown.YES : YesNoUnknown.NO);
+					}
 				}
 
 				if (exposures != null) {
@@ -597,14 +676,13 @@ public class ContactFacadeEjb implements ContactFacade {
 					});
 				}
 
-				if (eventSummaries != null && exportContact.getEventCount() != 0) {
-					eventSummaries.stream()
-						.filter(v -> v.getContactUuid().equals(exportContact.getUuid()))
-						.max(Comparator.comparing(ContactEventSummaryDetails::getEventDate))
-						.ifPresent(eventSummary -> {
-							exportContact.setLatestEventId(eventSummary.getEventUuid());
-							exportContact.setLatestEventTitle(eventSummary.getEventTitle());
-						});
+				if (eventSummaries != null) {
+					List<ContactEventSummaryDetails> contactEvents = eventSummaries.getOrDefault(exportContact.getUuid(), Collections.emptyList());
+					exportContact.setEventCount((long) contactEvents.size());
+					contactEvents.stream().max(Comparator.comparing(ContactEventSummaryDetails::getEventDate)).ifPresent(eventSummary -> {
+						exportContact.setLatestEventId(eventSummary.getEventUuid());
+						exportContact.setLatestEventTitle(eventSummary.getEventTitle());
+					});
 				}
 
 				pseudonymizer.pseudonymizeDto(ContactExportDto.class, exportContact, inJurisdiction, null);
@@ -612,7 +690,6 @@ public class ContactFacadeEjb implements ContactFacade {
 		}
 
 		return exportContacts;
-
 	}
 
 	@Override
@@ -635,7 +712,7 @@ public class ContactFacadeEjb implements ContactFacade {
 			contactRoot.get(Contact.FOLLOW_UP_UNTIL));
 
 		cq.where(
-			AbstractAdoService.and(
+			CriteriaBuilderHelper.and(
 				cb,
 				listCriteriaBuilder.buildContactFilter(contactCriteria, cb, contactRoot, cq, contactJoins),
 				cb.isNotEmpty(contactRoot.get(Contact.VISITS))));
@@ -651,7 +728,7 @@ public class ContactFacadeEjb implements ContactFacade {
 			ContactJoins joins = new ContactJoins(visitsCqRoot);
 
 			visitsCq.where(
-				ContactService
+				CriteriaBuilderHelper
 					.and(cb, contactRoot.get(AbstractDomainObject.UUID).in(visitSummaryUuids), cb.isNotEmpty(visitsCqRoot.get(Contact.VISITS))));
 			visitsCq.multiselect(
 				Stream
@@ -829,7 +906,7 @@ public class ContactFacadeEjb implements ContactFacade {
 			Join<Visit, Symptoms> visitSymptomsJoin = visitsJoin.join(Visit.SYMPTOMS, JoinType.LEFT);
 
 			visitsCq.where(
-				AbstractAdoService.and(
+				CriteriaBuilderHelper.and(
 					cb,
 					contact.get(AbstractDomainObject.UUID).in(contactUuids),
 					cb.isNotEmpty(visitsCqRoot.get(Contact.VISITS)),
@@ -911,23 +988,20 @@ public class ContactFacadeEjb implements ContactFacade {
 			dtos = em.createQuery(query).getResultList();
 		}
 
-		// Load latest events info
-		// Adding a second query here is not perfect, but selecting the last event with a criteria query
-		// doesn't seem to be possible and using a native query is not an option because of user filters
-		List<ContactEventSummaryDetails> eventSummaries =
-			eventService.getEventSummaryDetailsByContacts(dtos.stream().map(ContactIndexDetailedDto::getUuid).collect(Collectors.toList()));
+		// Load event count and latest events info per contact
+		Map<String, List<ContactEventSummaryDetails>> eventSummaries =
+			eventService.getEventSummaryDetailsByContacts(dtos.stream().map(ContactIndexDetailedDto::getUuid).collect(Collectors.toList()))
+				.stream()
+				.collect(Collectors.groupingBy(ContactEventSummaryDetails::getContactUuid, Collectors.toList()));
 		for (ContactIndexDetailedDto contact : dtos) {
-			if (contact.getEventCount() == 0) {
-				continue;
-			}
 
-			eventSummaries.stream()
-				.filter(v -> v.getContactUuid().equals(contact.getUuid()))
-				.max(Comparator.comparing(ContactEventSummaryDetails::getEventDate))
-				.ifPresent(eventSummary -> {
-					contact.setLatestEventId(eventSummary.getEventUuid());
-					contact.setLatestEventTitle(eventSummary.getEventTitle());
-				});
+			List<ContactEventSummaryDetails> contactEvents = eventSummaries.getOrDefault(contact.getUuid(), Collections.emptyList());
+			contact.setEventCount((long) contactEvents.size());
+
+			contactEvents.stream().max(Comparator.comparing(ContactEventSummaryDetails::getEventDate)).ifPresent(eventSummary -> {
+				contact.setLatestEventId(eventSummary.getEventUuid());
+				contact.setLatestEventTitle(eventSummary.getEventTitle());
+			});
 		}
 
 		Pseudonymizer pseudonymizer = Pseudonymizer.getDefault(userService::hasRight, I18nProperties.getCaption(Captions.inaccessibleValue));
@@ -985,37 +1059,41 @@ public class ContactFacadeEjb implements ContactFacade {
 		}
 	}
 
+	@SuppressWarnings("JpaQueryApiInspection")
 	@Override
 	public int getNonSourceCaseCountForDashboard(List<String> caseUuids) {
 
 		if (CollectionUtils.isEmpty(caseUuids)) {
 			// Avoid empty IN clause
 			return 0;
+		} else if (caseUuids.size() > ModelConstants.PARAMETER_LIMIT) {
+			List<BigInteger> countResults = new LinkedList<>();
+			IterableHelper.executeBatched(caseUuids, ModelConstants.PARAMETER_LIMIT, batchedCaseUuids -> {
+				Query query = em.createNativeQuery(
+					String.format(
+						"SELECT DISTINCT count(case1_.id) FROM contact AS contact0_ LEFT OUTER JOIN cases AS case1_ ON (contact0_.%s_id = case1_.id) WHERE case1_.%s IN (:uuidList)",
+						Contact.RESULTING_CASE.toLowerCase(),
+						Case.UUID));
+				query.setParameter("uuidList", batchedCaseUuids);
+				countResults.add((BigInteger) query.getSingleResult());
+			});
+			return countResults.stream().collect(Collectors.summingInt(BigInteger::intValue));
+		} else {
+			Query query = em.createNativeQuery(
+				String.format(
+					"SELECT DISTINCT count(case1_.id) FROM contact AS contact0_ LEFT OUTER JOIN cases AS case1_ ON (contact0_.%s_id = case1_.id) WHERE case1_.%s IN (:uuidList)",
+					Contact.RESULTING_CASE.toLowerCase(),
+					Case.UUID));
+			query.setParameter("uuidList", caseUuids);
+			BigInteger count = (BigInteger) query.getSingleResult();
+			return count.intValue();
 		}
 
-		Query query = em.createNativeQuery(
-			String.format(
-				"SELECT DISTINCT count(case1_.id) FROM contact AS contact0_ LEFT OUTER JOIN cases AS case1_ ON (contact0_.%s_id = case1_.id) WHERE case1_.%s IN (%s)",
-				Contact.RESULTING_CASE.toLowerCase(),
-				Case.UUID,
-				QueryHelper.concatStrings(caseUuids)));
-
-		BigInteger count = (BigInteger) query.getSingleResult();
-		return count.intValue();
 	}
 
-	public Contact fromDto(@NotNull ContactDto source) {
+	public Contact fromDto(@NotNull ContactDto source, boolean checkChangeDate) {
 
-		Contact target = contactService.getByUuid(source.getUuid());
-		if (target == null) {
-			target = new Contact();
-			target.setUuid(source.getUuid());
-			if (source.getCreationDate() != null) {
-				target.setCreationDate(new Timestamp(source.getCreationDate().getTime()));
-			}
-		}
-
-		DtoHelper.validateDto(source, target);
+		Contact target = DtoHelper.fillOrBuildEntity(source, contactService.getByUuid(source.getUuid()), Contact::new, checkChangeDate);
 
 		target.setCaze(caseService.getByReferenceDto(source.getCaze()));
 		target.setPerson(personService.getByReferenceDto(source.getPerson()));
@@ -1030,8 +1108,17 @@ public class ContactFacadeEjb implements ContactFacade {
 		}
 
 		// use only date, not time
+		target.setMultiDayContact(source.isMultiDayContact());
+		if (source.isMultiDayContact()) {
+			target.setFirstContactDate(
+				source.getFirstContactDate() != null ? DateHelper8.toDate(DateHelper8.toLocalDate(source.getFirstContactDate())) : null);
+		} else {
+			target.setFirstContactDate(null);
+		}
+
 		target.setLastContactDate(
 			source.getLastContactDate() != null ? DateHelper8.toDate(DateHelper8.toLocalDate(source.getLastContactDate())) : null);
+
 		target.setContactIdentificationSource(source.getContactIdentificationSource());
 		target.setContactIdentificationSourceDetails(source.getContactIdentificationSourceDetails());
 		target.setTracingApp(source.getTracingApp());
@@ -1053,6 +1140,7 @@ public class ContactFacadeEjb implements ContactFacade {
 		target.setReportLon(source.getReportLon());
 		target.setReportLatLonAccuracy(source.getReportLatLonAccuracy());
 		target.setExternalID(source.getExternalID());
+		target.setExternalToken(source.getExternalToken());
 
 		target.setRegion(regionService.getByReferenceDto(source.getRegion()));
 		target.setDistrict(districtService.getByReferenceDto(source.getDistrict()));
@@ -1089,14 +1177,30 @@ public class ContactFacadeEjb implements ContactFacade {
 		target.setQuarantineOfficialOrderSentDate(source.getQuarantineOfficialOrderSentDate());
 		target.setAdditionalDetails(source.getAdditionalDetails());
 
-		target.setEpiData(epiDataFacade.fromDto(source.getEpiData()));
-		target.setHealthConditions(clinicalCourseFacade.fromHealthConditionsDto(source.getHealthConditions()));
+		target.setEpiData(epiDataFacade.fromDto(source.getEpiData(), checkChangeDate));
+		target.setHealthConditions(clinicalCourseFacade.fromHealthConditionsDto(source.getHealthConditions(), checkChangeDate));
 		target.setReturningTraveler(source.getReturningTraveler());
 		target.setEndOfQuarantineReason(source.getEndOfQuarantineReason());
 		target.setEndOfQuarantineReasonDetails(source.getEndOfQuarantineReasonDetails());
 
+		target.setProhibitionToWork(source.getProhibitionToWork());
+		target.setProhibitionToWorkFrom(source.getProhibitionToWorkFrom());
+		target.setProhibitionToWorkUntil(source.getProhibitionToWorkUntil());
+
+		target.setReportingDistrict(districtService.getByReferenceDto(source.getReportingDistrict()));
+
+		// create new vaccination info in case it is created in the mobile app
+		// TODO [vaccination info] no VaccinationInfoDto.build() will be needed after integrating vaccination info into the app
+		VaccinationInfoDto vaccinationInfo = source.getVaccinationInfo();
+		if (vaccinationInfo == null && target.getVaccinationInfo() == null) {
+			vaccinationInfo = VaccinationInfoDto.build();
+		}
+		if (vaccinationInfo != null) {
+			target.setVaccinationInfo(vaccinationInfoFacade.fromDto(vaccinationInfo, checkChangeDate));
+		}
+
 		if (source.getSormasToSormasOriginInfo() != null) {
-			target.setSormasToSormasOriginInfo(originInfoFacade.toDto(source.getSormasToSormasOriginInfo()));
+			target.setSormasToSormasOriginInfo(originInfoFacade.toDto(source.getSormasToSormasOriginInfo(), checkChangeDate));
 		}
 
 		return target;
@@ -1267,6 +1371,8 @@ public class ContactFacadeEjb implements ContactFacade {
 		target.setReportingUser(UserFacadeEjb.toReferenceDto(source.getReportingUser()));
 		target.setReportDateTime(source.getReportDateTime());
 
+		target.setMultiDayContact(source.isMultiDayContact());
+		target.setFirstContactDate(source.getFirstContactDate());
 		target.setLastContactDate(source.getLastContactDate());
 		target.setContactIdentificationSource(source.getContactIdentificationSource());
 		target.setContactIdentificationSourceDetails(source.getContactIdentificationSourceDetails());
@@ -1289,6 +1395,7 @@ public class ContactFacadeEjb implements ContactFacade {
 		target.setReportLon(source.getReportLon());
 		target.setReportLatLonAccuracy(source.getReportLatLonAccuracy());
 		target.setExternalID(source.getExternalID());
+		target.setExternalToken(source.getExternalToken());
 
 		target.setRegion(RegionFacadeEjb.toReferenceDto(source.getRegion()));
 		target.setDistrict(DistrictFacadeEjb.toReferenceDto(source.getDistrict()));
@@ -1331,8 +1438,16 @@ public class ContactFacadeEjb implements ContactFacade {
 		target.setEndOfQuarantineReason(source.getEndOfQuarantineReason());
 		target.setEndOfQuarantineReasonDetails(source.getEndOfQuarantineReasonDetails());
 
+		target.setProhibitionToWork(source.getProhibitionToWork());
+		target.setProhibitionToWorkFrom(source.getProhibitionToWorkFrom());
+		target.setProhibitionToWorkUntil(source.getProhibitionToWorkUntil());
+
+		target.setReportingDistrict(DistrictFacadeEjb.toReferenceDto(source.getReportingDistrict()));
+
 		target.setSormasToSormasOriginInfo(SormasToSormasOriginInfoFacadeEjb.toDto(source.getSormasToSormasOriginInfo()));
 		target.setOwnershipHandedOver(source.getSormasToSormasShares().stream().anyMatch(SormasToSormasShareInfo::isOwnershipHandedOver));
+
+		target.setVaccinationInfo(VaccinationInfoFacadeEjb.toDto(source.getVaccinationInfo()));
 
 		return target;
 	}
@@ -1469,12 +1584,12 @@ public class ContactFacadeEjb implements ContactFacade {
 
 		final Date reportDate = criteria.getReportDate();
 		final Date lastContactDate = criteria.getLastContactDate();
-		final Predicate recentContactsFilter = AbstractAdoService.and(
+		final Predicate recentContactsFilter = CriteriaBuilderHelper.and(
 			cb,
 			contactService.recentDateFilter(cb, reportDate, contactRoot.get(Contact.REPORT_DATE_TIME), 30),
 			contactService.recentDateFilter(cb, lastContactDate, contactRoot.get(Contact.LAST_CONTACT_DATE), 30));
 
-		cq.where(AbstractAdoService.and(cb, defaultFilter, userFilter, samePersonFilter, diseaseFilter, cazeFilter, recentContactsFilter));
+		cq.where(CriteriaBuilderHelper.and(cb, defaultFilter, userFilter, samePersonFilter, diseaseFilter, cazeFilter, recentContactsFilter));
 
 		List<SimilarContactDto> contacts = em.createQuery(cq).getResultList();
 
@@ -1500,6 +1615,10 @@ public class ContactFacadeEjb implements ContactFacade {
 	@Override
 	public boolean exists(String uuid) {
 		return this.contactService.exists(uuid);
+	}
+
+	private boolean shouldExportFields(ExportConfigurationDto exportConfiguration, String... fields) {
+		return exportConfiguration == null || !Collections.disjoint(exportConfiguration.getProperties(), Arrays.asList(fields));
 	}
 
 	@LocalBean

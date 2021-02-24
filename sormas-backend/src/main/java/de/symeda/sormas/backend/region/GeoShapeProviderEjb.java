@@ -167,7 +167,6 @@ public class GeoShapeProviderEjb implements GeoShapeProvider {
 
 	@PostConstruct
 	private void loadData() {
-
 		String countryName = configFacade.getCountryName();
 		if (countryName.isEmpty()) {
 			logger.warn("Shape files couldn't be loaded, because no country name is defined in sormas.properties.");
@@ -187,7 +186,8 @@ public class GeoShapeProviderEjb implements GeoShapeProvider {
 		String filepath = "shapefiles/" + countryName + "/regions.shp";
 		URL filepathUrl = getClass().getClassLoader().getResource(filepath);
 		if (filepathUrl == null || !filepath.endsWith(".shp")) {
-			throw new RuntimeException("Invalid shapefile filepath: " + filepath);
+			logger.warn("Invalid shapefile filepath: " + filepath);
+			return;
 		}
 
 		try {
@@ -270,7 +270,8 @@ public class GeoShapeProviderEjb implements GeoShapeProvider {
 		String filepath = "shapefiles/" + countryName + "/districts.shp";
 		URL filepathUrl = getClass().getClassLoader().getResource(filepath);
 		if (filepathUrl == null || !filepath.endsWith(".shp")) {
-			throw new RuntimeException("Invalid shapefile filepath: " + filepath);
+			logger.warn("Invalid shapefile filepath: " + filepath);
+			return;
 		}
 
 		try {

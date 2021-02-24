@@ -1,5 +1,6 @@
 package de.symeda.sormas.ui.configuration.infrastructure;
 
+import java.util.Collections;
 import java.util.Date;
 
 import com.vaadin.icons.VaadinIcons;
@@ -14,7 +15,6 @@ import com.vaadin.ui.VerticalLayout;
 import com.vaadin.ui.Window;
 import com.vaadin.ui.themes.ValoTheme;
 import com.vaadin.v7.ui.ComboBox;
-import com.vaadin.v7.ui.TextField;
 
 import de.symeda.sormas.api.EntityRelevanceStatus;
 import de.symeda.sormas.api.i18n.Captions;
@@ -23,12 +23,14 @@ import de.symeda.sormas.api.i18n.I18nProperties;
 import de.symeda.sormas.api.i18n.Strings;
 import de.symeda.sormas.api.infrastructure.InfrastructureType;
 import de.symeda.sormas.api.region.CountryCriteria;
+import de.symeda.sormas.api.region.CountryIndexDto;
 import de.symeda.sormas.api.user.UserRight;
 import de.symeda.sormas.api.utils.DateHelper;
 import de.symeda.sormas.ui.ControllerProvider;
 import de.symeda.sormas.ui.UserProvider;
 import de.symeda.sormas.ui.ViewModelProviders;
 import de.symeda.sormas.ui.configuration.AbstractConfigurationView;
+import de.symeda.sormas.ui.configuration.infrastructure.components.SearchField;
 import de.symeda.sormas.ui.utils.ButtonHelper;
 import de.symeda.sormas.ui.utils.CssStyles;
 import de.symeda.sormas.ui.utils.GridExportStreamResource;
@@ -47,7 +49,7 @@ public class CountriesView extends AbstractConfigurationView {
 	private ViewConfiguration viewConfiguration;
 
 	// Filter
-	private TextField searchField;
+	private SearchField searchField;
 	private ComboBox relevanceStatusFilter;
 	private Button resetButton;
 
@@ -56,7 +58,7 @@ public class CountriesView extends AbstractConfigurationView {
 	private CountriesGrid grid;
 	protected Button createButton;
 	protected Button importButton;
-	protected Button importAllButton;
+	protected Button importDefaultCountriesButton;
 	private MenuBar bulkOperationsDropdown;
 
 	public CountriesView() {
@@ -86,12 +88,12 @@ public class CountriesView extends AbstractConfigurationView {
 			}, ValoTheme.BUTTON_PRIMARY);
 			addHeaderComponent(importButton);
 
-			importAllButton = ButtonHelper.createIconButton(Captions.actionImportAllCountries, VaadinIcons.UPLOAD, e -> {
-					Window window = VaadinUiUtil.showPopupWindow(new ImportAllCountriesLayout());
+			importDefaultCountriesButton = ButtonHelper.createIconButton(Captions.actionImportAllCountries, VaadinIcons.UPLOAD, e -> {
+				Window window = VaadinUiUtil.showPopupWindow(new ImportDefaultCountriesLayout());
 				window.setCaption(I18nProperties.getString(Strings.headingImportAllCountries));
 				window.addCloseListener(c -> grid.reload());
 			}, ValoTheme.BUTTON_PRIMARY);
-			addHeaderComponent(importAllButton);
+			addHeaderComponent(importDefaultCountriesButton);
 		}
 
 		if (UserProvider.getCurrent().hasUserRight(UserRight.INFRASTRUCTURE_EXPORT)) {
@@ -101,9 +103,9 @@ public class CountriesView extends AbstractConfigurationView {
 
 			StreamResource streamResource = new GridExportStreamResource(
 				grid,
-				"sormas_countries",
 				"sormas_countries_" + DateHelper.formatDateForExport(new Date()) + ".csv",
-				CountriesGrid.EDIT_BTN_ID);
+				Collections.singletonList(CountriesGrid.EDIT_BTN_ID),
+				Collections.singletonList(CountryIndexDto.DEFAULT_NAME));
 			FileDownloader fileDownloader = new FileDownloader(streamResource);
 			fileDownloader.extend(exportButton);
 		}
@@ -156,16 +158,11 @@ public class CountriesView extends AbstractConfigurationView {
 		filterLayout.setSpacing(true);
 		filterLayout.setWidth(100, Unit.PERCENTAGE);
 
-		searchField = new TextField();
-		searchField.setId("search");
-		searchField.setWidth(200, Unit.PIXELS);
-		searchField.setInputPrompt(I18nProperties.getString(Strings.promptSearch));
-		searchField.setNullRepresentation("");
+		searchField = new SearchField();
 		searchField.addTextChangeListener(e -> {
 			criteria.nameCodeLike(e.getText());
-			navigateTo(criteria);
+			grid.reload();
 		});
-		CssStyles.style(searchField, CssStyles.FORCE_CAPTION);
 		filterLayout.addComponent(searchField);
 
 		resetButton = ButtonHelper.createButton(Captions.actionResetFilters, event -> {
